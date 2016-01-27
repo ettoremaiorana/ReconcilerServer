@@ -11,7 +11,7 @@ import org.tmatesoft.sqljet.core.SqlJetTransactionMode;
 import org.tmatesoft.sqljet.core.table.ISqlJetTable;
 import org.tmatesoft.sqljet.core.table.SqlJetDb;
 
-public class Persister {
+public class Persister implements MessageHandler {
 
 	private static final String CREATE_TABLE = "CREATE TABLE trades (trade TEXT NOT NULL PRIMARY KEY)";
 
@@ -19,6 +19,8 @@ public class Persister {
 
 	private final int numOfThreads = 1; //TODO make me configurable
 	private final ExecutorService executorService = Executors.newFixedThreadPool(numOfThreads);
+
+	private boolean append = false;
 	private final static Logger LOG = LogManager.getLogger(Persister.class);
 	void start() {
 		//TODO do it numOfThreads time with tasks that take long enough
@@ -33,9 +35,24 @@ public class Persister {
 		executorService.shutdown();
 	}
 
-	void enqueue(PersistTask persistTask) {
+	public void enqueue(String topic, String message) {
+		//parse data
+		final String[] tradesAsString = message.split("\\|");
+		//TODO optimised for memory consumption as the server is low on memory.
+		//Please use a byte buffer pool.
+		final PersistTask persistTask = new PersistTask(tradesAsString, append);
+
 		LOG.info("Persist task: " + persistTask);
 		executorService.execute(persistTask);
+
+		//if last bit of data is 'more', next time we read we append the new records
+		//to the existing ones.
+		if (tradesAsString[tradesAsString.length - 1].equals("more")) {
+			append = true;
+		}
+		else {
+			append = false;
+		}
 	}
 
 	static class PersistTask implements Runnable {
