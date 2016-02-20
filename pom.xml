@@ -49,7 +49,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.fourcasters.forec.pubsub.Subscriber</mainClass>
+							<mainClass>com.fourcasters.forec.reconciler.server.ReconcilerBroker</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
