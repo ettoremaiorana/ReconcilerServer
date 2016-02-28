@@ -28,6 +28,8 @@ public class Persister implements MessageHandler {
 	private boolean append = false;
 	private final static Logger LOG = LogManager.getLogger(Persister.class);
 	void start() {
+		//TODO the executor service must be shared amongst message
+		//handlers and not segregated here.
 		//TODO do it numOfThreads time with tasks that take long enough
 		//to start all the threads.
 		executorService.execute(new Runnable() {
