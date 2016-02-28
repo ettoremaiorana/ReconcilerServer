@@ -34,6 +34,8 @@ public class ReconcilerBroker {
 
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
 	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
+    private static final String NEW_TRADES_TOPIC_NAME = "OPERATION@";
+
 	private static final int bufferSize = 10240;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
 	private static final byte[] DATA_IN_INPUT = new byte[bufferSize];
@@ -53,7 +55,7 @@ public class ReconcilerBroker {
 		server.bind("tcp://*:51125");
 		server.subscribe(HISTORY_TOPIC_NAME.getBytes());
 		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
-
+		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
 		Selector s = Selector.open();
 		ServerSocketChannel httpServer = ServerSocketChannel.open();
 		httpServer.configureBlocking(false);
