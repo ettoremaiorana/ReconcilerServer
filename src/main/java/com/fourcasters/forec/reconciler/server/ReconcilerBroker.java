@@ -80,6 +80,7 @@ public class ReconcilerBroker {
 			}
 
 			if (s.selectNow() > 0) {
+				LOG.info("Request received");
 				Iterator<SelectionKey> it = s.selectedKeys().iterator();
 				it.next();
 				it.remove();
@@ -93,16 +94,7 @@ public class ReconcilerBroker {
 				final BufferedReader httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				final PrintWriter httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
 				final HttpParser httpParser = new HttpParser(httpReader);
-				int response = httpParser.parseRequest();
-				if (response == 200) {
-					if (httpParser.getRequestURL().equals("/history/dat")) {
-						sendFile(clientChannel, "Trades.dat");
-					}
-					else if (httpParser.getRequestURL().equals("/history/csv")) {
-						LOG.info("Trades history requested in csv format");
-						sendFile(clientChannel, "Trades.csv");
-					}
-				}
+				int response = respond(clientChannel, httpParser);
 				LOG.info(response);
 				httpWriter.close();
 				httpReader.close();
@@ -115,6 +107,22 @@ public class ReconcilerBroker {
 		httpServer.close();
 		server.close();
 		ctx.close();
+	}
+
+
+
+	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
+		int response = httpParser.parseRequest();
+		if (response == 200) {
+			if (httpParser.getRequestURL().equals("/history/dat")) {
+				sendFile(clientChannel, "Trades.dat");
+			}
+			else if (httpParser.getRequestURL().equals("/history/csv")) {
+				LOG.info("Trades history requested in csv format");
+				sendFile(clientChannel, "Trades.csv");
+			}
+		}
+		return response;
 	}
 
 
