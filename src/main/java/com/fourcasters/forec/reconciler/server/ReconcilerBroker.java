@@ -63,6 +63,7 @@ public class ReconcilerBroker {
 		httpServer.socket().setReceiveBufferSize(1024);
 		key = httpServer.register(s, SelectionKey.OP_ACCEPT);
 
+		LOG.info("Listening on port " + httpServer.socket().getLocalPort());
 		running = true;
 		//start listening to messages
 		while (running) {
@@ -98,6 +99,7 @@ public class ReconcilerBroker {
 						sendFile(clientChannel, "Trades.dat");
 					}
 					else if (httpParser.getRequestURL().equals("/history/csv")) {
+						LOG.info("Trades history requested in csv format");
 						sendFile(clientChannel, "Trades.csv");
 					}
 				}
