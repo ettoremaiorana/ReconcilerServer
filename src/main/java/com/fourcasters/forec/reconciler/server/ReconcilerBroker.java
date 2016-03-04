@@ -59,7 +59,7 @@ public class ReconcilerBroker {
 		Selector s = Selector.open();
 		ServerSocketChannel httpServer = ServerSocketChannel.open();
 		httpServer.configureBlocking(false);
-		httpServer.bind(new InetSocketAddress("localhost", 8080));
+		httpServer.bind(new InetSocketAddress("localhost", Integer.getInteger("http.port", 8080)));
 		httpServer.socket().setReceiveBufferSize(1024);
 		key = httpServer.register(s, SelectionKey.OP_ACCEPT);
 
@@ -67,7 +67,7 @@ public class ReconcilerBroker {
 		//start listening to messages
 		while (running) {
 			//TODO _recvDirectBuffer has to change to take the starting position as a parameter
-			int recvTopicSize = server._recvDirectBuffer(TOPIC_BUFFER, bufferSize, ZMQ.NOBLOCK);
+			int recvTopicSize = server.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
 			if (recvTopicSize > 0) {
 				read(server);
 
@@ -144,20 +144,13 @@ public class ReconcilerBroker {
 	}
 
 
-
-	private static void registerSignalHandler() {
-		ZMQ.register_signalhandler();
-	}
-
-
-
 	private static int read(final Socket server) throws UnsupportedEncodingException {
 		TOPIC_BUFFER.flip();
 		TOPIC_BUFFER.get(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit()); //read only the bits just read
 		topicName = new String(TOPIC_NAME_IN_INPUT, CHARSET);
 		int recvDataSize = 0;
 		while (recvDataSize == 0) {
-			recvDataSize = server._recvDirectBuffer(DATA_BUFFER, bufferSize, ZMQ.NOBLOCK);
+			recvDataSize = server.recvByteBuffer(DATA_BUFFER, ZMQ.NOBLOCK);
 		}
 		DATA_BUFFER.flip();
 		DATA_BUFFER.get(DATA_IN_INPUT, 0, DATA_BUFFER.limit()); //read only the bits just read
