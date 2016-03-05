@@ -10,7 +10,6 @@ public class MessageHandlerFactory {
 		persister  = new Persister();
 		forwarder = new Forwarder();
 		tradeAppender = new TradeAppender();
-		persister.start();
 	}
 	public MessageHandler get(String topicName) {
 		final String id = topicName.substring(0, topicName.indexOf("@"));

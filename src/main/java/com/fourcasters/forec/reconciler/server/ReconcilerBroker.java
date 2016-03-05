@@ -8,8 +8,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -18,6 +20,8 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.LockSupport;
 
 import org.apache.logging.log4j.LogManager;
@@ -34,7 +38,7 @@ public class ReconcilerBroker {
 
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
 	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
-    private static final String NEW_TRADES_TOPIC_NAME = "OPERATION@";
+	private static final String NEW_TRADES_TOPIC_NAME = "STATUS@";
 
 	private static final int bufferSize = 10240;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
@@ -49,45 +53,61 @@ public class ReconcilerBroker {
 	private static SelectionKey key;
 
 	public static void main(String[] args) throws IOException {
-		//bind to endpoint
-		final Context ctx = ZMQ.context(1);
-		final Socket server = ctx.socket(ZMQ.SUB);
-		server.bind("tcp://*:51125");
-		server.subscribe(HISTORY_TOPIC_NAME.getBytes());
-		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
-		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
+		final Context ctx = Application.context;
+		final Socket server = zmqSetup(ctx);
+		final Socket newTradesListener = zmqSetupListener(ctx);
+
 		Selector s = Selector.open();
-		ServerSocketChannel httpServer = ServerSocketChannel.open();
-		httpServer.configureBlocking(false);
-		httpServer.bind(new InetSocketAddress("localhost", Integer.getInteger("http.port", 8080)));
-		httpServer.socket().setReceiveBufferSize(1024);
-		key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+		ServerSocketChannel httpServer = httpServerSetup(s);
 
-		LOG.info("Listening on port " + httpServer.socket().getLocalPort());
-		running = true;
+		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
+		LOG.info("Zmq  server listening on port 51125");
+
 		//start listening to messages
+		running = true;
 		while (running) {
-			//TODO _recvDirectBuffer has to change to take the starting position as a parameter
-			int recvTopicSize = server.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
-			if (recvTopicSize > 0) {
-				read(server);
+			zmqEventHandling(server);
+			zmqEventHandling(newTradesListener);
 
-				final MessageHandler handler = handlers.get(topicName);
-				handler.enqueue(topicName, data);
+			httpEventHandling(s, httpServer);
 
-				TOPIC_BUFFER.clear();
-				DATA_BUFFER.clear();
+			tasksProcessing();
+			//TODO Back off strategy
+			LockSupport.parkNanos(1_000_000_000L); //bleah
+		}
+		httpServer.close();
+		server.close();
+		ctx.close();
+	}
+
+	private static void tasksProcessing() {
+		Application.tasks.removeIf(
+				f -> {
+					return f.isDone() && logIfException(f);
+				});
+	}
+
+	private static boolean logIfException(Future<?> f) {
+		try {
+			f.get();
+		} catch (InterruptedException | ExecutionException e) {
+			LOG.error("Computation error", e);
+		}
+		return true;
+	}
+
+	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer)
+			throws IOException, ClosedChannelException, SocketException {
+		if (s.selectNow() > 0) {
+			LOG.info("Request received");
+			Iterator<SelectionKey> it = s.selectedKeys().iterator();
+			it.next();
+			it.remove();
+			if (!key.isValid()) {
+				key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+
 			}
-
-			if (s.selectNow() > 0) {
-				LOG.info("Request received");
-				Iterator<SelectionKey> it = s.selectedKeys().iterator();
-				it.next();
-				it.remove();
-				if (!key.isValid()) {
-					key = httpServer.register(s, SelectionKey.OP_ACCEPT);
-					continue;
-				}
+			else {
 				final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
 				final java.net.Socket client = clientChannel.socket();
 				client.setSendBufferSize(256);
@@ -99,25 +119,63 @@ public class ReconcilerBroker {
 				httpWriter.close();
 				httpReader.close();
 				client.close();
-
 			}
-			//TODO Back off strategy
-			LockSupport.parkNanos(1_000_000_000L); //bleah
+
 		}
-		httpServer.close();
-		server.close();
-		ctx.close();
 	}
 
+
+
+	private static void zmqEventHandling(final Socket socket) throws UnsupportedEncodingException {
+		int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
+		if (recvTopicSize > 0) {
+			read(socket);
+
+			final MessageHandler handler = handlers.get(topicName);
+			handler.enqueue(topicName, data);
+
+			TOPIC_BUFFER.clear();
+			DATA_BUFFER.clear();
+		}
+
+	}
+
+
+
+	private static ServerSocketChannel httpServerSetup(Selector s)
+			throws IOException, SocketException, ClosedChannelException {
+		ServerSocketChannel httpServer = ServerSocketChannel.open();
+		httpServer.configureBlocking(false);
+		httpServer.bind(new InetSocketAddress(Integer.getInteger("http.port", 8080)));
+		httpServer.socket().setReceiveBufferSize(1024);
+		key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+		return httpServer;
+	}
+
+
+
+	private static Socket zmqSetup(final Context ctx) {
+		final Socket server = ctx.socket(ZMQ.SUB);
+		server.bind("tcp://*:51125");
+		server.subscribe(HISTORY_TOPIC_NAME.getBytes());
+		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
+		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
+		return server;
+	}
+
+
+	private static Socket zmqSetupListener(final Context ctx) {
+		final Socket listener = ctx.socket(ZMQ.SUB);
+		listener.connect("tcp://localhost:50027");
+		listener.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
+		return listener;
+	}
 
 
 	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
 		int response = httpParser.parseRequest();
 		if (response == 200) {
-			if (httpParser.getRequestURL().equals("/history/dat")) {
-				sendFile(clientChannel, "Trades.dat");
-			}
-			else if (httpParser.getRequestURL().equals("/history/csv")) {
+			if (httpParser.getRequestURL().equals("/history/csv")) {
 				LOG.info("Trades history requested in csv format");
 				sendFile(clientChannel, "Trades.csv");
 			}
