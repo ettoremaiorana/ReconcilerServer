@@ -28,7 +28,7 @@ public class Persister implements MessageHandler {
 
 		//if last bit of data is 'more', next time we read we append the new records
 		//to the existing ones.
-		if (tradesAsString[tradesAsString.length - 1].equals("more")) {
+		if (tradesAsString[tradesAsString.length - 1].trim().equals("more")) {
 			append = true;
 		}
 		else {
