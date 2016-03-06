@@ -53,12 +53,18 @@ public class Persister implements MessageHandler {
 
 		@Override
 		public void run() {
-			boolean autoflush = false;
-			boolean append = writeMode == WriteMode.APPEND;
-			File f = new File("Trades.csv");
-			try(PrintWriter pw = new PrintWriter(new FileOutputStream(f, append), autoflush);) {
-				for (String trade : trades) {
-					pw.write(trade + ",\n");
+			final boolean autoflush = false;
+			final boolean append = writeMode == WriteMode.APPEND;
+			final File f = new File("Trades.csv");
+			if (trades[trades.length - 1].trim().equals("more")) {
+				trades[trades.length - 1] = "";
+			}
+			try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, append), autoflush);) {
+				for (int i = 0; i < trades.length; i++) {
+					if (!trades[i].trim().equals("")) {
+						pw.write(trades[i]);
+						pw.write(",\n");
+					}
 				}
 				pw.flush();
 			} catch (FileNotFoundException e) {
