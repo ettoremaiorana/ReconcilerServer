@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.concurrent.Future;
 
 import org.apache.logging.log4j.LogManager;
@@ -11,16 +12,21 @@ import org.apache.logging.log4j.Logger;
 
 public class Persister implements MessageHandler {
 
-	private boolean append = false;
+	private volatile boolean append = false;
 	private final static Logger LOG = LogManager.getLogger(Persister.class);
 
 	public void enqueue(String topic, String message) {
+		LOG.info(topic + " = " + message);
 		//parse data
 		final String[] tradesAsString = message.split("\\|");
 		//TODO optimised for memory consumption as the server is low on memory.
 		//Please use a byte buffer pool.
 		final WriteCsvTask persistCsvTask = new WriteCsvTask(tradesAsString, append);
 		
+		final Future<?> f = Application.executor.submit(persistCsvTask);
+		LOG.info(f + " future added");
+		Application.tasks.add(f);
+
 		//if last bit of data is 'more', next time we read we append the new records
 		//to the existing ones.
 		if (tradesAsString[tradesAsString.length - 1].equals("more")) {
@@ -29,11 +35,14 @@ public class Persister implements MessageHandler {
 		else {
 			append = false;
 		}
-		final Future<?> f = Application.executor.submit(persistCsvTask);
-		Application.tasks.add(f);
 	}
 
 	static class WriteCsvTask implements Runnable {
+
+		@Override
+		public String toString() {
+			return "WriteCsvTask [trades=" + Arrays.toString(trades) + ", writeMode=" + writeMode + "]";
+		}
 
 		private final String[] trades;
 		private final WriteMode writeMode;

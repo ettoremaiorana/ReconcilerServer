@@ -90,6 +90,7 @@ public class ReconcilerBroker {
 	private static boolean logIfException(Future<?> f) {
 		try {
 			f.get();
+			LOG.info(f + " future has finished");
 		} catch (InterruptedException | ExecutionException e) {
 			LOG.error("Computation error", e);
 		}
