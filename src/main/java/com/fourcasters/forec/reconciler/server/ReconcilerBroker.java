@@ -97,32 +97,39 @@ public class ReconcilerBroker {
 		return true;
 	}
 
-	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer)
-			throws IOException, ClosedChannelException, SocketException {
-		if (s.selectNow() > 0) {
-			LOG.info("Request received");
-			Iterator<SelectionKey> it = s.selectedKeys().iterator();
-			it.next();
-			it.remove();
-			if (!key.isValid()) {
-				key = httpServer.register(s, SelectionKey.OP_ACCEPT);
-
+	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) {
+		final Future<?> f = Application.executor.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					if (s.selectNow() > 0) {
+						LOG.info("Request received");
+						Iterator<SelectionKey> it = s.selectedKeys().iterator();
+						it.next();
+						it.remove();
+						if (!key.isValid()) {
+							key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+						}
+						else {
+							final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
+							final java.net.Socket client = clientChannel.socket();
+							client.setSendBufferSize(256);
+							final BufferedReader httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
+							final PrintWriter httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
+							final HttpParser httpParser = new HttpParser(httpReader);
+							int response = respond(clientChannel, httpParser);
+							LOG.info(response);
+							httpWriter.close();
+							httpReader.close();
+							client.close();
+						}
+					}
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
 			}
-			else {
-				final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
-				final java.net.Socket client = clientChannel.socket();
-				client.setSendBufferSize(256);
-				final BufferedReader httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-				final PrintWriter httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
-				final HttpParser httpParser = new HttpParser(httpReader);
-				int response = respond(clientChannel, httpParser);
-				LOG.info(response);
-				httpWriter.close();
-				httpReader.close();
-				client.close();
-			}
-
-		}
+		});
+		Application.tasks.add(f);
 	}
 
 
