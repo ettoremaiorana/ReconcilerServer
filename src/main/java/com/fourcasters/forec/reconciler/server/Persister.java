@@ -16,13 +16,12 @@ public class Persister implements MessageHandler {
 	private final static Logger LOG = LogManager.getLogger(Persister.class);
 
 	public void enqueue(String topic, String message) {
-		LOG.info(topic + " = " + message);
 		//parse data
 		final String[] tradesAsString = message.split("\\|");
 		//TODO optimised for memory consumption as the server is low on memory.
 		//Please use a byte buffer pool.
 		final WriteCsvTask persistCsvTask = new WriteCsvTask(tradesAsString, append);
-		
+		LOG.info("Persisting: " + persistCsvTask);
 		final Future<?> f = Application.executor.submit(persistCsvTask);
 		LOG.info(f + " future added");
 		Application.tasks.add(f);
