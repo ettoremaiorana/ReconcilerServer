@@ -97,12 +97,12 @@ public class ReconcilerBroker {
 		return true;
 	}
 
-	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) {
-		final Future<?> f = Application.executor.submit(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					if (s.selectNow() > 0) {
+	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) throws IOException {
+		if (s.selectNow() > 0) {
+			final Future<?> f = Application.executor.submit(new Runnable() {
+				@Override
+				public void run() {
+					try {
 						LOG.info("Request received");
 						Iterator<SelectionKey> it = s.selectedKeys().iterator();
 						it.next();
@@ -123,13 +123,13 @@ public class ReconcilerBroker {
 							httpReader.close();
 							client.close();
 						}
+					} catch (IOException e) {
+						throw new RuntimeException(e);
 					}
-				} catch (IOException e) {
-					throw new RuntimeException(e);
 				}
-			}
-		});
-		Application.tasks.add(f);
+			});
+			Application.tasks.add(f);
+		}
 	}
 
 
