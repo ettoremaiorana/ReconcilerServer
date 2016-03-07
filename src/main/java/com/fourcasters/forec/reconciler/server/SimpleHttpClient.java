@@ -11,12 +11,17 @@ import java.net.Socket;
 public class SimpleHttpClient {
 
 	private static final String REQUEST = "GET /history/csv HTTP/1.1\r\n"+
-                                          "Host: localhost:8080\r\n\r\n";
-	public static void main(String[] args) throws IOException {
+                                          "Host: localhost:9090\r\n\r\n";
+	private static final String REQUEST0 = "GET /history/csv HTTP/1.1\r\n";
+	private static final String REQUEST1 = "Host: localhost:9090\r\n\r\n";
+	public static void main(String[] args) throws IOException, InterruptedException {
 		Socket s = new Socket();
-		s.connect(new InetSocketAddress("localhost", 8080));
+		s.connect(new InetSocketAddress("localhost", 9090));
 		PrintWriter writer = new PrintWriter(new BufferedOutputStream(s.getOutputStream()));
-		writer.write(REQUEST);
+		writer.write(REQUEST0);
+		writer.flush();
+		Thread.sleep(4000L);
+		writer.write(REQUEST1);
 		writer.flush();
 		BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
 		String line;

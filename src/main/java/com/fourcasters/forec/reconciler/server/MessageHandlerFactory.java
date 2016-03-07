@@ -5,11 +5,13 @@ public class MessageHandlerFactory {
 	private static final Persister persister;
 	private static final Forwarder forwarder;
 	private static final TradeAppender tradeAppender;
-	
+	private static final Identity identity;
+
 	static {
 		persister  = new Persister();
 		forwarder = new Forwarder();
 		tradeAppender = new TradeAppender();
+		identity = new Identity();
 	}
 	public MessageHandler get(String topicName) {
 		final String id = topicName.substring(0, topicName.indexOf("@"));
@@ -18,10 +20,10 @@ public class MessageHandlerFactory {
 			return forwarder;
 		case "HISTORY":
 			return persister;
-		case "OPERATION":
+		case "STATUS":
 			return tradeAppender;
 		default:
-			throw new IllegalArgumentException("The request" + id + " cannot be handled");
+			return identity;
 		}
 	}
 
