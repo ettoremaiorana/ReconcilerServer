@@ -22,9 +22,6 @@ public class Persister implements MessageHandler {
 		//Please use a byte buffer pool.
 		final WriteCsvTask persistCsvTask = new WriteCsvTask(tradesAsString, append);
 		LOG.info("Persisting: " + persistCsvTask);
-		final Future<?> f = Application.executor.submit(persistCsvTask);
-		LOG.info(f + " future added");
-		Application.tasks.add(f);
 
 		//if last bit of data is 'more', next time we read we append the new records
 		//to the existing ones.
@@ -34,6 +31,10 @@ public class Persister implements MessageHandler {
 		else {
 			append = false;
 		}
+
+		final Future<?> f = Application.executor.submit(persistCsvTask);
+		LOG.info(f + " future added");
+		Application.tasks.add(f);
 	}
 
 	static class WriteCsvTask implements Runnable {
