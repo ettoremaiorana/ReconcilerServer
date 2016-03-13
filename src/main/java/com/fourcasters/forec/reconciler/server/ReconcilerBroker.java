@@ -141,6 +141,8 @@ public class ReconcilerBroker {
 		if (recvTopicSize > 0) {
 			read(socket);
 
+			LOG.info("topic = " + topicName);
+			LOG.info("data  = " + data);
 			final MessageHandler handler = handlers.get(topicName);
 			handler.enqueue(topicName, data);
 
@@ -225,7 +227,7 @@ public class ReconcilerBroker {
 	private static int read(final Socket server) throws UnsupportedEncodingException {
 		TOPIC_BUFFER.flip();
 		TOPIC_BUFFER.get(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit()); //read only the bits just read
-		topicName = new String(TOPIC_NAME_IN_INPUT, CHARSET);
+		topicName = new String(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit(), CHARSET);
 		int recvDataSize = 0;
 		while (recvDataSize == 0) {
 			recvDataSize = server.recvByteBuffer(DATA_BUFFER, ZMQ.NOBLOCK);

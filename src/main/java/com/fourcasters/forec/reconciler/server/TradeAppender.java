@@ -28,19 +28,18 @@ public class TradeAppender implements MessageHandler {
 			@Override
 			public void run() {
 
-				LOG.info(topic + " = " + data);
 				final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
 
 				//TODO final String message = "ticket="+ticket;
 				final String message = "full";
+				LOG.info("Sending '" + message + "' on topic " + newTopic);
+				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
 				socket.send(message.getBytes(), 0);
-				LOG.info(newTopic + " : " + message);
 
 				//example: buffer = status + "," + type + "," + price + "," + ticket;
 				final long ticket = Long.parseLong(data.split(",")[3].trim());
 				//example: topic = topic_name + "@" + cross + "@" + algo_id
 				final int algoId = Integer.parseInt(topic.split("@")[2].trim());
-				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
 				sendEmail(algoId, ticket, data);
 				
 			}

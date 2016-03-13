@@ -21,7 +21,7 @@ public class Persister implements MessageHandler {
 		//TODO optimised for memory consumption as the server is low on memory.
 		//Please use a byte buffer pool.
 		final WriteCsvTask persistCsvTask = new WriteCsvTask(tradesAsString, append);
-		LOG.info("Persisting: " + persistCsvTask);
+		LOG.debug("Persisting: " + persistCsvTask);
 
 		//if last bit of data is 'more', next time we read we append the new records
 		//to the existing ones.
@@ -33,7 +33,7 @@ public class Persister implements MessageHandler {
 		}
 
 		final Future<?> f = Application.executor.submit(persistCsvTask);
-		LOG.info(f + " future added");
+		LOG.debug(f + " future added");
 		Application.tasks.add(f);
 	}
 
