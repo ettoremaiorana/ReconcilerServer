@@ -39,7 +39,7 @@ public class ReconcilerBroker {
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
 	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
 	private static final String NEW_TRADES_TOPIC_NAME = "STATUS@";
-	private static final String LOG_INFO_TOPIC_NAME = "LOG@INFO";
+	private static final String LOG_INFO_TOPIC_NAME = "LOGS@INFO";
 
 	private static final int bufferSize = 10240;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];

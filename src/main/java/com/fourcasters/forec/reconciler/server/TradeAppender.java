@@ -28,10 +28,10 @@ public class TradeAppender implements MessageHandler {
 			@Override
 			public void run() {
 
-				final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
+				final String newTopic = "RECONCILER@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
 
 				//TODO final String message = "ticket="+ticket;
-				final String message = "full";
+				final String message = "FULL";
 				LOG.info("Sending '" + message + "' on topic " + newTopic);
 				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
 				socket.send(message.getBytes(), 0);

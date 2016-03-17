@@ -14,7 +14,10 @@ public class ReconcilierREPL {
 		final Context ctx = ZMQ.context(1);
 		final Socket socket = ctx.socket(ZMQ.PUB);
 		//socket.connect("tcp://52.88.34.166:51125");
-		socket.connect("tcp://localhost:51125");
+		//socket.connect("tcp://52.33.13.29:51125");
+		//socket.connect("tcp://localhost:51125");
+		
+		//socket.connect("tcp://52.33.13.29:50026");
 		
 		while (true) {
 			final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
