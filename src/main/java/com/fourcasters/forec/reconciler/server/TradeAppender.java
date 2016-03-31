@@ -20,7 +20,7 @@ public class TradeAppender implements MessageHandler {
 	final static Socket socket = ctx.socket(ZMQ.PUB);
 
 	static {
-		socket.connect("tcp://localhost:51127");
+		socket.connect("tcp://localhost:51125");
 	}
 	@Override
 	public void enqueue(String topic, String data) {
@@ -28,7 +28,7 @@ public class TradeAppender implements MessageHandler {
 			@Override
 			public void run() {
 
-				final String newTopic = "RECONCILER@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
+				final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
 
 				//TODO final String message = "ticket="+ticket;
 				final String message = "FULL";

@@ -40,8 +40,10 @@ public class ReconcilerBroker {
 	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
 	private static final String NEW_TRADES_TOPIC_NAME = "STATUS@";
 	private static final String LOG_INFO_TOPIC_NAME = "LOGS@INFO";
+	private static final String MT4_TOPIC_NAME = "MT4@";
+	
 
-	private static final int bufferSize = 10240;
+	private static final int bufferSize = 10240*5;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
 	private static final byte[] DATA_IN_INPUT = new byte[bufferSize];
 	private static final ByteBuffer TOPIC_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
@@ -74,7 +76,7 @@ public class ReconcilerBroker {
 
 			tasksProcessing();
 			//TODO Back off strategy
-			LockSupport.parkNanos(1_000_000_000L); //bleah
+			LockSupport.parkNanos(10_000_000L); //bleah
 		}
 		httpServer.close();
 		server.close();
@@ -173,6 +175,8 @@ public class ReconcilerBroker {
 		server.subscribe(HISTORY_TOPIC_NAME.getBytes());
 		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
 		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
+		server.subscribe(MT4_TOPIC_NAME.getBytes());
+		
 		return server;
 	}
 
