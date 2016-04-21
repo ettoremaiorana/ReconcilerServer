@@ -61,12 +61,13 @@ public class Persister implements MessageHandler {
 				trades[trades.length - 1] = "";
 			}
 			try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, append), autoflush);) {
-				for (int i = 0; i < trades.length; i++) {
+				for (int i = 0; i < trades.length-1; i++) {
 					if (!trades[i].trim().equals("")) {
 						pw.write(trades[i]);
 						pw.write(",\n");
 					}
 				}
+				pw.write(trades[trades.length - 1]);
 				pw.flush();
 			} catch (FileNotFoundException e) {
 				throw new RuntimeException(e);
