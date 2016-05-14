@@ -7,16 +7,20 @@ import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 public class Forwarder implements MessageHandler {
-	final static Context ctx = Application.context;
-	final static Socket socket = ctx.socket(ZMQ.PUB);
+	private final Context ctx;
+	private final Socket socket;
+	private final ApplicationInterface application;
 
-	static {
+	public Forwarder(ApplicationInterface application) {
+		this.application = application;
+		this.ctx = application.context();
+		this.socket = ctx.socket(ZMQ.PUB);
 		socket.bind("tcp://*:51127");
 	}
 
 	@Override
 	public void enqueue(String topic, String message) {
-		final Future<?>f = Application.executor.submit(new Runnable() {
+		final Future<?>f = application.executor().submit(new Runnable() {
 			@Override
 			public void run() {
 				final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
@@ -24,7 +28,7 @@ public class Forwarder implements MessageHandler {
 				socket.send(message.getBytes(), 0);		
 			}
 		});
-		Application.tasks.offer(f);
+		application.futureTasks().offer(f);
 	}
 
 }

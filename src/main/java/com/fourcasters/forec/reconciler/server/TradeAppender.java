@@ -16,15 +16,20 @@ public class TradeAppender implements MessageHandler {
 
 	private final static String PASSWORD = System.getProperty("mail.password");
 	private final static Logger LOG = LogManager.getLogger(TradeAppender.class);
-	final static Context ctx = Application.context;
-	final static Socket socket = ctx.socket(ZMQ.PUB);
+	private final ApplicationInterface application;
+	private final Context ctx;
+	private final Socket socket;;
 
-	static {
+	public TradeAppender(ApplicationInterface application) {
+		this.application = application;
+		ctx = application.context();
+		socket  = ctx.socket(ZMQ.PUB);
 		socket.connect("tcp://localhost:51125");
 	}
+
 	@Override
 	public void enqueue(String topic, String data) {
-		final Future<?> future = Application.executor.submit(new Runnable() {
+		final Future<?> future = application.executor().submit(new Runnable() {
 			@Override
 			public void run() {
 
@@ -67,7 +72,7 @@ public class TradeAppender implements MessageHandler {
 				}
 			}
 		});
-		Application.tasks.add(future);
+		application.futureTasks().add(future);
 	}
 
 }

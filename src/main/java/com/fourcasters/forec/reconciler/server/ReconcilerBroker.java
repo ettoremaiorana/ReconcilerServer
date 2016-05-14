@@ -31,6 +31,7 @@ import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 public class ReconcilerBroker {
+	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
 	private static final String RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\n" +
 			"\r\n";
@@ -52,11 +53,11 @@ public class ReconcilerBroker {
 	private static boolean running;
 	private static String topicName;
 	private static String data;
-	private static MessageHandlerFactory handlers = new MessageHandlerFactory();
+	private static MessageHandlerFactory handlers = new MessageHandlerFactory(application);
 	private static SelectionKey key;
 
 	public static void main(String[] args) throws IOException {
-		final Context ctx = Application.context;
+		final Context ctx = application.context();
 		final Socket server = zmqSetup(ctx);
 		final Socket newTradesListener = zmqSetupListener(ctx);
 
@@ -69,8 +70,7 @@ public class ReconcilerBroker {
 		//start listening to messages
 		running = true;
 		while (running) {
-			zmqEventHandling(server);
-			zmqEventHandling(newTradesListener);
+			zmqEventHandling(server, newTradesListener);
 
 			httpEventHandling(s, httpServer);
 
@@ -84,7 +84,7 @@ public class ReconcilerBroker {
 	}
 
 	private static void tasksProcessing() {
-		Application.tasks.removeIf(
+		application.futureTasks().removeIf(
 				f -> {
 					return f.isDone() && logIfException(f);
 				});
@@ -102,7 +102,7 @@ public class ReconcilerBroker {
 
 	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) throws IOException {
 		if (s.selectNow() > 0) {
-			final Future<?> f = Application.executor.submit(new Runnable() {
+			final Future<?> f = application.executor().submit(new Runnable() {
 				@Override
 				public void run() {
 					try {
@@ -133,24 +133,26 @@ public class ReconcilerBroker {
 					}
 				}
 			});
-			Application.tasks.add(f);
+			application.futureTasks().add(f);
 		}
 	}
 
 
 
-	private static void zmqEventHandling(final Socket socket) throws UnsupportedEncodingException {
-		int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
-		if (recvTopicSize > 0) {
-			read(socket);
-
-			LOG.info("topic = " + topicName);
-			LOG.info("data  = " + data);
-			final MessageHandler handler = handlers.get(topicName);
-			handler.enqueue(topicName, data);
-
-			TOPIC_BUFFER.clear();
-			DATA_BUFFER.clear();
+	private static void zmqEventHandling(final Socket... sockets) throws UnsupportedEncodingException {
+		for (Socket socket : sockets) {
+			int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
+			if (recvTopicSize > 0) {
+				read(socket);
+				
+				LOG.info("topic = " + topicName);
+				LOG.info("data  = " + data);
+				final MessageHandler handler = handlers.get(topicName);
+				handler.enqueue(topicName, data);
+				
+				TOPIC_BUFFER.clear();
+				DATA_BUFFER.clear();
+			}
 		}
 
 	}
