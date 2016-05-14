@@ -3,4 +3,4 @@ jdk:
   - oraclejdk8
   - openjdk8
 script: mvn clean compile test assembly:single
-
+sudo: required
