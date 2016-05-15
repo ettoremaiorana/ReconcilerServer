@@ -10,8 +10,6 @@ import java.net.Socket;
 
 public class SimpleHttpClient {
 
-	private static final String REQUEST = "GET /history/csv HTTP/1.1\r\n"+
-                                          "Host: localhost:9090\r\n\r\n";
 	private static final String REQUEST0 = "GET /history/csv HTTP/1.1\r\n";
 	private static final String REQUEST1 = "Host: localhost:9090\r\n\r\n";
 	public static void main(String[] args) throws IOException, InterruptedException {

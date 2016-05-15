@@ -7,17 +7,17 @@ import java.util.concurrent.Future;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
-import com.fourcasters.forec.reconciler.server.persist.TaskFactory.FullTask;
-import com.fourcasters.forec.reconciler.server.persist.TaskFactory.SingleTradeTask;
+import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.FullTask;
+import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTradeTask;
 
 public class TransactionManager implements TransactionPhaseListener {
 
 	private int tasksToRun;
-	private final TaskFactory taskFactory;
+	private final TradeTaskFactory taskFactory;
 	private final LinkedHashMap<Integer, Transaction> transactions = new LinkedHashMap<>();
 	private final ApplicationInterface application;
 
-	public TransactionManager(TaskFactory taskFactory, ApplicationInterface application) {
+	public TransactionManager(TradeTaskFactory taskFactory, ApplicationInterface application) {
 		super();
 		this.tasksToRun = 0;
 		this.taskFactory = taskFactory;

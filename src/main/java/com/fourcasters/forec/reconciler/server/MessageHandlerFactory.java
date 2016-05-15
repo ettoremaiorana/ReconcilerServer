@@ -1,13 +1,13 @@
 package com.fourcasters.forec.reconciler.server;
 
 import com.fourcasters.forec.reconciler.server.mt4.Mt4HandlerFactory;
-import com.fourcasters.forec.reconciler.server.persist.AnotherPersister;
-import com.fourcasters.forec.reconciler.server.persist.TaskFactory;
+import com.fourcasters.forec.reconciler.server.persist.TradePersister;
+import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory;
 import com.fourcasters.forec.reconciler.server.persist.TransactionManager;
 
 public class MessageHandlerFactory {
 
-	private final AnotherPersister persister;
+	private final TradePersister persister;
 	private final Forwarder forwarder;
 	private final TradeAppender tradeAppender;
 	private final Logger logger;
@@ -15,7 +15,7 @@ public class MessageHandlerFactory {
 	private final Identity identity;
 
 	public MessageHandlerFactory(ApplicationInterface application) {
-		persister  = new AnotherPersister(new TransactionManager(new TaskFactory(application), application), application);
+		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application), application), application);
 		forwarder = new Forwarder(application);
 		tradeAppender = new TradeAppender(application);
 		logger = new Logger();

@@ -17,11 +17,11 @@ public class TransactionManagerTest {
 
 	private ApplicationInterface application = new ApplicationMock();
 	private TransactionManager transactionManager;
-	private TaskFactory taskFactory;
+	private TradeTaskFactory taskFactory;
 	
 	@Before
 	public void setup() {
-		taskFactory = new TaskFactory(application);
+		taskFactory = new TradeTaskFactory(application);
 		transactionManager = new TransactionManager(taskFactory, application);
 	}
 

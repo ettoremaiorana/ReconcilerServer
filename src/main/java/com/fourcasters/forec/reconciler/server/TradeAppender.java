@@ -36,7 +36,7 @@ public class TradeAppender implements MessageHandler {
 				final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
 
 				//TODO final String message = "ticket="+ticket;
-				final String message = "FULL";
+				final String message = "SINGLE";
 				LOG.info("Sending '" + message + "' on topic " + newTopic);
 				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
 				socket.send(message.getBytes(), 0);

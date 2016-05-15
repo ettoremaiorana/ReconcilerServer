@@ -4,13 +4,11 @@ package com.fourcasters.forec.reconciler.server.persist;
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.MessageHandler;
 
-public class AnotherPersister implements MessageHandler {
+public class TradePersister implements MessageHandler {
 
-	private final ApplicationInterface application;
 	private final TransactionManager transactionManager;
 
-	public AnotherPersister(TransactionManager transactionManager, ApplicationInterface application) {
-		this.application = application;
+	public TradePersister(TransactionManager transactionManager, ApplicationInterface application) {
 		this.transactionManager = transactionManager;
 	}
 

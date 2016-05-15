@@ -7,12 +7,10 @@ import java.io.PrintWriter;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 
-public class TaskFactory {
+public class TradeTaskFactory {
 
-	private final ApplicationInterface application;
 
-	public TaskFactory(ApplicationInterface application) {
-		this.application = application;
+	public TradeTaskFactory(ApplicationInterface application) {
 	}
 
 	public SingleTradeTask newSingleTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId) {
