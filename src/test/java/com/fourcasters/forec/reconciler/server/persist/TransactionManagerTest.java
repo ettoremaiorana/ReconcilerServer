@@ -8,6 +8,7 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
+import com.fourcasters.forec.reconciler.server.ApplicationMock;
 @RunWith(MockitoJUnitRunner.class)
 public class TransactionManagerTest {
 

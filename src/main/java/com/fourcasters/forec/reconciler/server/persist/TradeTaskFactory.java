@@ -35,8 +35,10 @@ public class TradeTaskFactory {
 					pw.flush();
 				} catch (FileNotFoundException e) {
 					throw new RuntimeException(e);
+				} finally {
+					listener.onTaskEnd();
+					listener.onTransactionEnd(transId);
 				}
-				listener.onTransactionEnd(transId);
 			}
 		});
 	}
@@ -65,8 +67,11 @@ public class TradeTaskFactory {
 				} catch (FileNotFoundException e) {
 					throw new RuntimeException(e);
 				}
-				if (!trades[trades.length - 1].trim().equals("more")) {
-					listener.onTransactionEnd(transId);
+				finally {
+					listener.onTaskEnd();
+					if (!trades[trades.length - 1].trim().equals("more")) {
+						listener.onTransactionEnd(transId);
+					}
 				}
 			}
 		});

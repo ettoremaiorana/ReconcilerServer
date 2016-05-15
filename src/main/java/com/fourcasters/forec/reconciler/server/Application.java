@@ -2,6 +2,8 @@ package com.fourcasters.forec.reconciler.server;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -17,7 +19,7 @@ public class Application implements ApplicationInterface {
 	//Queue of pending tasks. Not thread safe, but doesn't matter here because offer/poll is performed by a single thread.
 	private static final Deque<Future<?>> futureTasks = new ArrayDeque<>(512);
 	//Queue of tasks to be executed by the main thread, so to avoid lock and contention.
-	private static final Deque<SelectorTask> selectorTasks = new ArrayDeque<>(512);
+	private static final BlockingQueue<SelectorTask> selectorTasks = new ArrayBlockingQueue<>(512);
 	@Override
 	public Context context() {
 		return context;
@@ -31,7 +33,7 @@ public class Application implements ApplicationInterface {
 		return futureTasks;
 	}
 	@Override
-	public Deque<SelectorTask> selectorTasks() {
+	public BlockingQueue<SelectorTask> selectorTasks() {
 		return selectorTasks;
 	}
 

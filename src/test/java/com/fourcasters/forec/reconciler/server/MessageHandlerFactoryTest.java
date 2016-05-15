@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.fourcasters.forec.reconciler.server.persist.ApplicationMock;
-
 public class MessageHandlerFactoryTest {
 
 	private MessageHandlerFactory mhf = new MessageHandlerFactory(new ApplicationMock());

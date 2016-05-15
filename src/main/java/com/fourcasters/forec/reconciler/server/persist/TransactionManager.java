@@ -1,6 +1,8 @@
 package com.fourcasters.forec.reconciler.server.persist;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
@@ -29,39 +31,52 @@ public class TransactionManager implements TransactionPhaseListener {
 
 		Transaction t = transactions.get(transId);
 		if (t == null) {
-			final ArrayList<Runnable> tasks = new ArrayList<>(16);
+			final Deque<Runnable> tasks = new ArrayDeque<>(16);
 			t = new Transaction(tasks);
 			transactions.put(transId, t);
 		}
 		t.add(task);
-		onNewTask();
+		onTaskStart();
 	}
 
 	public void onSingleTransaction(int transId, String tradesInMessage) {
 		final SingleTradeTask task = taskFactory.newSingleTradeTask(tradesInMessage, this, transId);
-		final ArrayList<Runnable> tasks = new ArrayList<>(1);
+		final Deque<Runnable> tasks = new ArrayDeque<>(1);
 		tasks.add(task);
 		final Transaction t = new Transaction(tasks);
 		transactions.put(transId, t);
-		onNewTask();
+		onTaskStart();
 	}
 
-	private void onNewTask() {
-		tasksToRun++;
-		//add polling task to selector task queue
-		application.selectorTasks().add(new SelectorTask() {
-			@Override
-			public void run() {
-				final Entry<Integer, Transaction> e = transactions.entrySet().iterator().next();
-				final Transaction t = e.getValue();
-				final Future<?> future = application.executor().submit(t.nextTask());
-				application.futureTasks().add(future);
-				if (t.completed) {
-					transactions.remove(e.getKey());
-				}
+	private final SelectorTask POLLING_TASK = new SelectorTask() {
+		@Override
+		public void run() {
+			//TODO avoid iterator allocation using toArray(E[])
+			final Iterator<Entry<Integer, Transaction>> it = transactions.entrySet().iterator();
+			Entry<Integer, Transaction> e = it.next();
+			while (e.getValue().completed && it.hasNext()) {
+				transactions.remove(e.getKey());
+				e = it.next();
 			}
-		});
-	}
+
+			final Transaction t = e.getValue();
+			final Runnable task = t.nextTask();
+			if (task != null) {
+				final Future<?> future = application.executor().submit(task);
+				application.futureTasks().add(future);
+			}
+			else {
+				application.selectorTasks().add(this);
+			}
+		}
+	};
+
+	private final SelectorTask DECREASE_TASK_COUNT = new SelectorTask() {
+		@Override
+		public void run() {
+			tasksToRun--;
+		}
+	};
 
 
 	int numberOfTransactions() {
@@ -74,35 +89,27 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	static class Transaction {
 
-		private final ArrayList<Runnable> tasks;
+		private final Deque<Runnable> tasks;
 		private boolean completed;
 
-		private Transaction(ArrayList<Runnable> tasks) {
+		private Transaction(Deque<Runnable> tasks) {
 			completed = false;
 			this.tasks = tasks;
 		}
 
 		private void add(Runnable task) {
-			tasks.add(task);
+			tasks.offer(task);
 		}
 
 		private Runnable nextTask() {
 			assert tasks.size() > 0;
-			return tasks.remove(0);
+			return tasks.poll();
 		}
 
 		void complete() {
 			completed = true;
 		}
 	}
-
-
-
-	final Runnable ON_TASK_COMPLETE = new Runnable() {
-		public void run() {
-			tasksToRun--;
-		}
-	};
 
 	@Override
 	public void onTransactionStart(int transId) {
@@ -114,9 +121,24 @@ public class TransactionManager implements TransactionPhaseListener {
 		application.selectorTasks().add(new SelectorTask() {
 			@Override
 			public void run() {
-				transactions.remove(transId);
+				final Transaction t = transactions.get(transId);
+				if (t != null) {
+					t.completed = true;
+				}
 			}
 		});
+	}
+
+	@Override
+	public void onTaskEnd() {
+		application.selectorTasks().add(DECREASE_TASK_COUNT);
+	}
+
+	@Override
+	public void onTaskStart() {
+		tasksToRun++;
+		//add polling task to selector task queue
+		application.selectorTasks().add(POLLING_TASK);
 	}
 
 }

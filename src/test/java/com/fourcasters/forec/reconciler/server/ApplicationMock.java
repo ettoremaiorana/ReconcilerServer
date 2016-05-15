@@ -1,20 +1,18 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server;
 
 import java.util.ArrayDeque;
-
 import java.util.Deque;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 
-import com.fourcasters.forec.reconciler.server.ApplicationInterface;
-import com.fourcasters.forec.reconciler.server.SelectorTask;
-
 public class ApplicationMock implements ApplicationInterface {
 
-	private Deque<SelectorTask> selectorTask = new ArrayDeque<>();
+	private BlockingQueue<SelectorTask> selectorTask = new ArrayBlockingQueue<>(512);
 	private Deque<Future<?>> futureTasks = new ArrayDeque<>();
 	
 
@@ -35,7 +33,7 @@ public class ApplicationMock implements ApplicationInterface {
 	}
 
 	@Override
-	public Deque<SelectorTask> selectorTasks() {
+	public BlockingQueue<SelectorTask> selectorTasks() {
 		return selectorTask;
 	}
 
