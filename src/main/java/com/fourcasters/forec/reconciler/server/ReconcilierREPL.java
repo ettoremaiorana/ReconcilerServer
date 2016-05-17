@@ -24,8 +24,10 @@ public class ReconcilierREPL {
 			System.out.print("Topic: ");
 			final String topic = reader.readLine();
 			System.out.print("Message: ");
+			assert topic != null;
 			final String message = reader.readLine();
 			socket.send(topic.getBytes(), ZMQ.SNDMORE);
+			assert message != null;
 			socket.send(message.getBytes(), 0);
 		}
 	}
