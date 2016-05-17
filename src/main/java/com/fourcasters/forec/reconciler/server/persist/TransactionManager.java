@@ -53,20 +53,21 @@ public class TransactionManager implements TransactionPhaseListener {
 		public void run() {
 			//TODO avoid iterator allocation using toArray(E[])
 			final Iterator<Entry<Integer, Transaction>> it = transactions.entrySet().iterator();
-			Entry<Integer, Transaction> e = it.next();
-			while (e.getValue().completed && it.hasNext()) {
-				transactions.remove(e.getKey());
-				e = it.next();
-			}
-
-			final Transaction t = e.getValue();
-			final Runnable task = t.nextTask();
-			if (task != null) {
-				final Future<?> future = application.executor().submit(task);
-				application.futureTasks().add(future);
-			}
-			else {
-				application.selectorTasks().add(this);
+			while (it.hasNext()) {
+				Entry<Integer, Transaction> e = it.next();
+				if (!e.getValue().completed) {
+					final Transaction t = e.getValue();
+					final Runnable task = t.nextTask();
+					if (task != null) {
+						final Future<?> future = application.executor().submit(task);
+						application.futureTasks().add(future);
+					}
+					else {
+						application.selectorTasks().add(this);
+					}
+					break;
+				}
+				it.remove();
 			}
 		}
 	};
