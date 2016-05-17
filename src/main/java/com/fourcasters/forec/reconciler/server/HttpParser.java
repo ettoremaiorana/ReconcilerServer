@@ -153,7 +153,7 @@ public class HttpParser {
 		// that fscking rfc822 allows multiple lines, we don't care now
 		line = reader.readLine();
 		System.out.println(line);
-		while (!line.equals("")) {
+		while (line != null && !line.equals("")) {
 			idx = line.indexOf(':');
 			if (idx < 0) {
 				headers = null;
