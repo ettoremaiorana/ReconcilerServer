@@ -10,6 +10,8 @@ env:
    - secure: "tg7ubAmFryWrBvCQblLOxa+vsjARt79vjF1/8WCQwImCMocibOYayDI/v/tmaobGpwu1HTUwfrifntvyk2YgQFBpvbJyQ6mqBhF8W/tBQHqRRPpLXo8XsTC2n5GWpPoncA+tJIpGQ4pon/pr5UB6e9mfWkRpKpmM/M3RpkdSnBIZzuR2OyJPAosk+Ih+4a8qoncW4+QqcjCtkREAowA/r4xdktpRrLwBLJK3ZbOC4Ww6yey0CtdpCgpiL/VArwzCScnFaiDkc7ChSxeRUmPRQWX43tL1fCBohcXefaQFQxmW1X6Jn9LchboQNrOdpV8Fz2y0H4hmTB4l0fjFqkSZr8F3bLfqwRphMolDVUk3m+km2XTtsdqs6Y1M3YRhPrmbGsN8wL9Fj3LLVegGVY2TBrMQEb+C7SyD1t9uifbzu7a60yiA2syuyTaacpX/anbAhPfV7MnvcjzT44fHZu/ohSB5O+LFKwg9w95xZEtYubYXeW56Egk7RKzzrenF2xwMsnkoYbu63+A4wYAHDEq04r4pR2dYRjpwqTwp4Z85ddQv0KTrNSIM4R8Qec+tTjyjBGnBjp2b3JpR8ZrFOMyZlyaVaxmCzb7q95a2Trv9GDu1ESlZ/0dKablFzm3z1L1Fo5s2u8zO58FllYfymM2VBWXuI/p7YdH9JGOAwiEA77E="
 
 addons:
+  code_climate:
+      repo_token: 4d21a393bbee9cd51afae81e2cf603aa46615fe77a9d9ac324c2931b010b65a9
   coverity_scan:
     project:
       name: "ettoremaiorana/ReconcilerServer"
