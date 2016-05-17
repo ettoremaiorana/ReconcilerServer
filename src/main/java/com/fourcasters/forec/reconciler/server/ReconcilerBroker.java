@@ -187,7 +187,7 @@ public class ReconcilerBroker {
 		final Socket listener = ctx.socket(ZMQ.SUB);
 		listener.connect("tcp://localhost:50027");
 		listener.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
-		if (Boolean.getBoolean(System.getProperty("log.info"))) {
+		if (Boolean.getBoolean("log.info")) {
 			listener.subscribe(LOG_INFO_TOPIC_NAME.getBytes());
 		}
 		return listener;
