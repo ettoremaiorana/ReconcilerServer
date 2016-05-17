@@ -9,8 +9,8 @@ import com.fourcasters.forec.reconciler.server.MessageHandler;
 
 public class RealtimeHandler implements MessageHandler {
 
-	final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm");
-	final static GregorianCalendar gc = new GregorianCalendar();
+	final SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm");
+	final GregorianCalendar gc = new GregorianCalendar();
 
 	@Override
 	public void enqueue(String topic, String data) {
