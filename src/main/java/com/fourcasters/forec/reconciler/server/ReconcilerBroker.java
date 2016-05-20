@@ -33,8 +33,7 @@ import org.zeromq.ZMQ.Socket;
 public class ReconcilerBroker {
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
-	private static final String RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\n" +
-			"\r\n";
+	private static final byte[] RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\n\r\n".getBytes();
 
 
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
@@ -42,7 +41,7 @@ public class ReconcilerBroker {
 	private static final String NEW_TRADES_TOPIC_NAME = "STATUS@";
 	private static final String LOG_INFO_TOPIC_NAME = "LOGS@INFO";
 	private static final String MT4_TOPIC_NAME = "MT4@";
-	
+
 
 	private static final int bufferSize = 10240*5;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
@@ -75,12 +74,20 @@ public class ReconcilerBroker {
 			httpEventHandling(s, httpServer);
 
 			tasksProcessing();
+			selectorTaskProcessing();
 			//TODO Back off strategy
 			LockSupport.parkNanos(10_000_000L); //bleah
 		}
 		httpServer.close();
 		server.close();
 		ctx.close();
+	}
+
+	private static void selectorTaskProcessing() {
+		SelectorTask task;
+		while ((task = application.selectorTasks().poll()) != null) {
+			task.run();
+		}
 	}
 
 	private static void tasksProcessing() {
@@ -144,12 +151,12 @@ public class ReconcilerBroker {
 			int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
 			if (recvTopicSize > 0) {
 				read(socket);
-				
+
 				LOG.info("topic = " + topicName);
 				LOG.info("data  = " + data);
 				final MessageHandler handler = handlers.get(topicName);
 				handler.enqueue(topicName, data);
-				
+
 				TOPIC_BUFFER.clear();
 				DATA_BUFFER.clear();
 			}
@@ -178,7 +185,7 @@ public class ReconcilerBroker {
 		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
 		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
 		server.subscribe(MT4_TOPIC_NAME.getBytes());
-		
+
 		return server;
 	}
 
@@ -196,11 +203,10 @@ public class ReconcilerBroker {
 
 	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
 		int response = httpParser.parseRequest();
-		if (response == 200) {
-			if (httpParser.getRequestURL().equals("/history/csv")) {
-				LOG.info("Trades history requested in csv format");
-				sendFile(clientChannel, "Trades.csv");
-			}
+		if (response == 200 && httpParser.getRequestURL().equals("/history/csv")) {
+			LOG.info("Trades history requested in csv format");
+			sendFile(clientChannel, "Trades.csv");
+
 		}
 		return response;
 	}
@@ -214,7 +220,7 @@ public class ReconcilerBroker {
 		envelopTmp.deleteOnExit();
 		FileChannel tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
 		FileChannel readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
-		tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER.getBytes()));
+		tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
 		long position = 0;
 		do {
 			long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256, tmpChannel);

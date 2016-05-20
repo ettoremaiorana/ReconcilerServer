@@ -12,15 +12,15 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
-public class TradeAppender implements MessageHandler {
+public class TradeEventCapturer implements MessageHandler {
 
 	private final static String PASSWORD = System.getProperty("mail.password");
-	private final static Logger LOG = LogManager.getLogger(TradeAppender.class);
+	private final static Logger LOG = LogManager.getLogger(TradeEventCapturer.class);
 	private final ApplicationInterface application;
 	private final Context ctx;
 	private final Socket socket;;
 
-	public TradeAppender(ApplicationInterface application) {
+	public TradeEventCapturer(ApplicationInterface application) {
 		this.application = application;
 		ctx = application.context();
 		socket  = ctx.socket(ZMQ.PUB);
@@ -35,11 +35,6 @@ public class TradeAppender implements MessageHandler {
 
 				final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
 
-				//TODO final String message = "ticket="+ticket;
-				final String message = "SINGLE";
-				LOG.info("Sending '" + message + "' on topic " + newTopic);
-				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
-				socket.send(message.getBytes(), 0);
 
 				//example: buffer = status + "," + type + "," + price + "," + ticket;
 				final long ticket = Long.parseLong(data.split(",")[3].trim());
@@ -47,6 +42,11 @@ public class TradeAppender implements MessageHandler {
 				final int algoId = Integer.parseInt(topic.split("@")[2].trim());
 				sendEmail(algoId, ticket, data);
 				
+				//TODO final String message = "ticket="+ticket;
+				final String message = "SINGLE="+ticket;
+				LOG.info("Sending '" + message + "' on topic " + newTopic);
+				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
+				socket.send(message.getBytes(), 0);
 			}
 
 			private void sendEmail(int algoId, long ticket, String data) {

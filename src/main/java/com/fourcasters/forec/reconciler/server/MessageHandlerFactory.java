@@ -9,7 +9,7 @@ public class MessageHandlerFactory {
 
 	private final TradePersister persister;
 	private final Forwarder forwarder;
-	private final TradeAppender tradeAppender;
+	private final TradeEventCapturer tradeAppender;
 	private final Logger logger;
 	private final Mt4HandlerFactory mt4HandlerFactory;
 	private final Identity identity;
@@ -17,7 +17,7 @@ public class MessageHandlerFactory {
 	public MessageHandlerFactory(ApplicationInterface application) {
 		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application), application), application);
 		forwarder = new Forwarder(application);
-		tradeAppender = new TradeAppender(application);
+		tradeAppender = new TradeEventCapturer(application);
 		logger = new Logger();
 		mt4HandlerFactory = new Mt4HandlerFactory();
 		identity = new Identity();

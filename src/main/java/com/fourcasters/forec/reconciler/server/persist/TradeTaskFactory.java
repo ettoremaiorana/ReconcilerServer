@@ -55,7 +55,7 @@ public class TradeTaskFactory {
 				if (trades[trades.length - 1].trim().equals("more")) {
 					trades[trades.length - 1] = "";
 				}
-				try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, true), autoflush);) {
+				try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, false), autoflush);) {
 					for (int i = 0; i < trades.length-1; i++) {
 						if (!trades[i].trim().equals("")) {
 							pw.write(trades[i]);
