@@ -43,7 +43,7 @@ public class TradeTaskFactory {
 		});
 	}
 
-	public FullTask newFullReconciliationTask(final String tradesInMessage, TransactionPhaseListener listener, int transId) {
+	public FullTask newFullReconciliationTask(final String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
 		return new FullTask(new Runnable() {
 
 			@Override
@@ -51,11 +51,12 @@ public class TradeTaskFactory {
 				final String[] trades = tradesInMessage.split("\\|");
 				//if last bit of data is not 'more', we create a new selector task to end the transaction
 				final boolean autoflush = false;
+				final boolean toBeContinued = trades[trades.length - 1].trim().equals("more");
 				final File f = new File("Trades.csv");
-				if (trades[trades.length - 1].trim().equals("more")) {
+				if (toBeContinued) {
 					trades[trades.length - 1] = "";
 				}
-				try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, false), autoflush);) {
+				try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, !first), autoflush);) {
 					for (int i = 0; i < trades.length-1; i++) {
 						if (!trades[i].trim().equals("")) {
 							pw.write(trades[i]);

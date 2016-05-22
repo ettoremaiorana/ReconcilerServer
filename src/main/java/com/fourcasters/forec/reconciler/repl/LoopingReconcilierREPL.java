@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server;
+package com.fourcasters.forec.reconciler.repl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,7 +8,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
-public class ReconcilierREPL {
+public class LoopingReconcilierREPL {
 
 	public static void main(String[] args) throws IOException {
 		final Context ctx = ZMQ.context(1);

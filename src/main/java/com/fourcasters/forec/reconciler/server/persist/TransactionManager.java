@@ -27,9 +27,9 @@ public class TransactionManager implements TransactionPhaseListener {
 	}
 
 	public void onFullTransaction(Integer transId, String tradesInMessage) {
-		final FullTask task = taskFactory.newFullReconciliationTask(tradesInMessage, this, transId);
-
 		Transaction t = transactions.get(transId);
+		final FullTask task = taskFactory.newFullReconciliationTask(tradesInMessage, this, transId, t == null);
+
 		if (t == null) {
 			final Deque<Runnable> tasks = new ArrayDeque<>(16);
 			t = new Transaction(tasks);
