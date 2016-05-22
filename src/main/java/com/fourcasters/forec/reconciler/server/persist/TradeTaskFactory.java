@@ -5,10 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 
 public class TradeTaskFactory {
 
+	private static final File f = new File("Trades.csv");
+	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
 
 	public TradeTaskFactory(ApplicationInterface application) {
 	}
@@ -20,7 +25,6 @@ public class TradeTaskFactory {
 				final String[] trades = tradesInMessage.split("\\|");
 				//if last bit of data is not 'more', we create a new selector task to end the transaction
 				final boolean autoflush = false;
-				final File f = new File("Trades.csv");
 				if (trades[trades.length - 1].trim().equals("more")) {
 					trades[trades.length - 1] = "";
 				}
@@ -44,6 +48,7 @@ public class TradeTaskFactory {
 	}
 
 	public FullTask newFullReconciliationTask(final String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
+		LOG.info("TransId " + transId + " -> first? " + first);
 		return new FullTask(new Runnable() {
 
 			@Override
@@ -52,7 +57,6 @@ public class TradeTaskFactory {
 				//if last bit of data is not 'more', we create a new selector task to end the transaction
 				final boolean autoflush = false;
 				final boolean toBeContinued = trades[trades.length - 1].trim().equals("more");
-				final File f = new File("Trades.csv");
 				if (toBeContinued) {
 					trades[trades.length - 1] = "";
 				}
@@ -70,7 +74,7 @@ public class TradeTaskFactory {
 				}
 				finally {
 					listener.onTaskEnd();
-					if (!trades[trades.length - 1].trim().equals("more")) {
+					if (!toBeContinued) {
 						listener.onTransactionEnd(transId);
 					}
 				}

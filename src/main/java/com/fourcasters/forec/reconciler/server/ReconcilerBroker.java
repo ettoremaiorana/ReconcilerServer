@@ -60,8 +60,8 @@ public class ReconcilerBroker {
 		final Socket server = zmqSetup(ctx);
 		final Socket newTradesListener = zmqSetupListener(ctx);
 
-		Selector s = Selector.open();
-		ServerSocketChannel httpServer = httpServerSetup(s);
+		final Selector s = Selector.open();
+		final ServerSocketChannel httpServer = httpServerSetup(s);
 
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
 		LOG.info("Zmq  server listening on port 51125");
@@ -79,6 +79,7 @@ public class ReconcilerBroker {
 			LockSupport.parkNanos(10_000_000L); //bleah
 		}
 		httpServer.close();
+		s.close();
 		server.close();
 		ctx.close();
 	}

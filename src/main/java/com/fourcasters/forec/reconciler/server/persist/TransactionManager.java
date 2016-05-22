@@ -7,6 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
 import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.FullTask;
@@ -14,6 +17,7 @@ import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTr
 
 public class TransactionManager implements TransactionPhaseListener {
 
+	private static final Logger LOG = LogManager.getLogger(TransactionManager.class);
 	private int tasksToRun;
 	private final TradeTaskFactory taskFactory;
 	private final LinkedHashMap<Integer, Transaction> transactions = new LinkedHashMap<>();
@@ -28,6 +32,7 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	public void onFullTransaction(Integer transId, String tradesInMessage) {
 		Transaction t = transactions.get(transId);
+		LOG.info("TransId " + transId + " -> t? " + t);
 		final FullTask task = taskFactory.newFullReconciliationTask(tradesInMessage, this, transId, t == null);
 
 		if (t == null) {
@@ -37,6 +42,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		}
 		t.add(task);
 		onTaskStart();
+		LOG.info("tasksToRun? " + tasksToRun);
 	}
 
 	public void onSingleTransaction(int transId, String tradesInMessage) {
@@ -51,6 +57,8 @@ public class TransactionManager implements TransactionPhaseListener {
 	private final SelectorTask POLLING_TASK = new SelectorTask() {
 		@Override
 		public void run() {
+			LOG.info("transaction.size.before? " + transactions.size());
+
 			//TODO avoid iterator allocation using toArray(E[])
 			final Iterator<Entry<Integer, Transaction>> it = transactions.entrySet().iterator();
 			while (it.hasNext()) {
@@ -69,6 +77,7 @@ public class TransactionManager implements TransactionPhaseListener {
 				}
 				it.remove();
 			}
+			LOG.info("transaction.size.after? " + transactions.size());
 		}
 	};
 
@@ -76,6 +85,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		@Override
 		public void run() {
 			tasksToRun--;
+			LOG.info("tasksToRun? " + tasksToRun);
 		}
 	};
 
@@ -119,13 +129,18 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	@Override
 	public void onTransactionEnd(int transId) {
+		LOG.info("TransId " + transId + " -> on transaction end");
 		application.selectorTasks().add(new SelectorTask() {
 			@Override
 			public void run() {
+				LOG.info("transaction.size.before? " + transactions.size());
+
 				final Transaction t = transactions.get(transId);
 				if (t != null) {
+
 					t.completed = true;
 				}
+				LOG.info("TransId " + transId + " -> completed? " + t.completed);
 			}
 		});
 	}
