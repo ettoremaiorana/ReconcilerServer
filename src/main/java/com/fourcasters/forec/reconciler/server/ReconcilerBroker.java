@@ -20,6 +20,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.LockSupport;
@@ -34,7 +35,7 @@ public class ReconcilerBroker {
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
 	private static final byte[] RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\n\r\n".getBytes();
-
+	private static final Random random = new Random(System.currentTimeMillis());
 
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
 	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
@@ -111,8 +112,12 @@ public class ReconcilerBroker {
 	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) throws IOException {
 		if (s.selectNow() > 0) {
 			final Future<?> f = application.executor().submit(new Runnable() {
+
 				@Override
 				public void run() {
+					BufferedReader httpReader = null;
+					PrintWriter httpWriter = null;
+					java.net.Socket client = null;
 					try {
 						LOG.info("Request received");
 						Iterator<SelectionKey> it = s.selectedKeys().iterator();
@@ -123,21 +128,27 @@ public class ReconcilerBroker {
 								key = httpServer.register(s, SelectionKey.OP_ACCEPT);
 							} else {
 								final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
-								final java.net.Socket client = clientChannel.socket();
+								client = clientChannel.socket();
 								client.setSendBufferSize(256);
 								client.setSoTimeout(3000);
-								final BufferedReader httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-								final PrintWriter httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
+								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
+								httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
 								final HttpParser httpParser = new HttpParser(httpReader);
 								int response = respond(clientChannel, httpParser);
 								LOG.info(response);
-								httpWriter.close();
-								httpReader.close();
-								client.close();
 							}
 						}
 					} catch (IOException e) {
 						throw new RuntimeException(e);
+					}
+					finally {
+							try {
+								if (httpWriter != null) httpWriter.close();
+								if (httpReader != null) httpReader.close();
+								if (client != null) client.close();
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
 					}
 				}
 			});
@@ -215,29 +226,48 @@ public class ReconcilerBroker {
 
 
 	private static void sendFile(final SocketChannel clientChannel, String fileName) throws IOException {
-		File file = new File(fileName);
-		File envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()));	
-		envelopTmp.createNewFile();
-		envelopTmp.deleteOnExit();
-		FileChannel tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
-		FileChannel readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
-		tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
-		long position = 0;
-		do {
-			long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256, tmpChannel);
-			position += transfered;
-		} while(position < file.length());
-		tmpChannel.force(true);
-		tmpChannel.close();
-		position = 0;
-		do {
-			long transfered = readChannel.transferTo(position, position + 256, clientChannel);
-			position += transfered;
-			LOG.debug("Looping...");
-		} while(position < envelopTmp.length());
-		clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
-		readChannel.close();
-		envelopTmp.delete();
+		FileChannel tmpChannel = null;
+		FileChannel readChannel = null;
+		File envelopTmp = null;
+		try {
+			final File file = new File(fileName);
+			envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()));
+			if (!envelopTmp.exists()) {
+				envelopTmp.createNewFile();
+			}
+			else {
+				LOG.warn("Temp file already exists, please check");
+				envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()) + random.nextInt());
+			}
+			envelopTmp.deleteOnExit();
+			tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
+			readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
+			tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
+			long position = 0;
+			do {
+				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256, tmpChannel);
+				position += transfered;
+			} while(position < file.length());
+			tmpChannel.force(true);
+			position = 0;
+			do {
+				long transfered = readChannel.transferTo(position, position + 256, clientChannel);
+				position += transfered;
+				LOG.debug("Looping...");
+			} while(position < envelopTmp.length());
+			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
+			
+		}
+		finally {
+			if(tmpChannel != null) tmpChannel.close();
+			if(readChannel != null) readChannel.close();
+			if(envelopTmp != null) {
+				if(!envelopTmp.delete()) {
+					LOG.warn("Unable to delete temporary file {}", envelopTmp.getAbsoluteFile());
+				}
+					
+			}
+		}
 	}
 
 
