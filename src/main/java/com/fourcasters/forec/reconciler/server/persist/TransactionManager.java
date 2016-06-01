@@ -139,8 +139,11 @@ public class TransactionManager implements TransactionPhaseListener {
 				if (t != null) {
 
 					t.completed = true;
+					LOG.info("TransId " + transId + " -> completed? " + t.completed);
 				}
-				LOG.info("TransId " + transId + " -> completed? " + t.completed);
+				else {
+					LOG.info("TransId " + transId + " -> NULL ");	
+				}
 			}
 		});
 	}
