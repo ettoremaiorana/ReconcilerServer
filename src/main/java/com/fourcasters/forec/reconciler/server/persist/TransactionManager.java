@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
 import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.FullTask;
+import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.OpenTradeTask;
 import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTradeTask;
 
 public class TransactionManager implements TransactionPhaseListener {
@@ -47,6 +48,16 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	public void onSingleTransaction(int transId, String tradesInMessage) {
 		final SingleTradeTask task = taskFactory.newSingleTradeTask(tradesInMessage, this, transId);
+		final Deque<Runnable> tasks = new ArrayDeque<>(1);
+		tasks.add(task);
+		final Transaction t = new Transaction(tasks);
+		transactions.put(transId, t);
+		onTaskStart();
+	}
+
+
+	public void onOpenTransaction(int transId, String tradesInMessage) {
+		final OpenTradeTask task = taskFactory.newOpenTradeTask(tradesInMessage, this, transId);
 		final Deque<Runnable> tasks = new ArrayDeque<>(1);
 		tasks.add(task);
 		final Transaction t = new Transaction(tasks);
@@ -159,5 +170,4 @@ public class TransactionManager implements TransactionPhaseListener {
 		//add polling task to selector task queue
 		application.selectorTasks().add(POLLING_TASK);
 	}
-
 }

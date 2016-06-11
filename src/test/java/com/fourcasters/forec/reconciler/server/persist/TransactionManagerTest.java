@@ -1,8 +1,9 @@
 package com.fourcasters.forec.reconciler.server.persist;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -35,6 +36,8 @@ public class TransactionManagerTest {
 		assertEquals(2, transactionManager.numberOfTransactions());
 		transactionManager.onFullTransaction(67890, "z,z,z,z,z,z||y,y,y,y,y,y||more");
 		assertEquals(2, transactionManager.numberOfTransactions());
+		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
+		assertEquals(3, transactionManager.numberOfTransactions());
 	}
 
 	@Test
@@ -43,6 +46,10 @@ public class TransactionManagerTest {
 		assertEquals(1, application.selectorTasks().size());
 		transactionManager.onFullTransaction(67890, "a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x");
 		assertEquals(2, application.selectorTasks().size());
+		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
+		assertEquals(3, application.selectorTasks().size());
+		transactionManager.onSingleTransaction(12345, "a,b,c,d,e,f");
+		assertEquals(4, application.selectorTasks().size());
 	}
 
 
@@ -52,6 +59,8 @@ public class TransactionManagerTest {
 		assertEquals(1, transactionManager.tasksToRun());
 		transactionManager.onFullTransaction(67890, "a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x");
 		assertEquals(2, transactionManager.tasksToRun());
+		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
+		assertEquals(3, transactionManager.tasksToRun());
 	}
 
 	@Test
@@ -60,6 +69,14 @@ public class TransactionManagerTest {
 		assertEquals(1, transactionManager.numberOfTransactions()); //one task
 		assertEquals(1, transactionManager.tasksToRun()); //one task
 		assertEquals(1, application.selectorTasks().size()); //decrease tasksToRun
-		
+	}
+
+	@Ignore
+	@Test
+	public void onNewOpenTaskTransactionIsAddedAndThenRemoved() {
+		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
+		assertEquals(1, transactionManager.numberOfTransactions()); //one task
+		assertEquals(1, transactionManager.tasksToRun()); //one task
+		assertEquals(1, application.selectorTasks().size()); //decrease tasksToRun
 	}
 }

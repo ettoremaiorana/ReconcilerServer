@@ -23,6 +23,9 @@ public class TradePersister implements MessageHandler {
 		if (mode == TransactionMode.SINGLE) {
 			transactionManager.onSingleTransaction(transId, tradesInMessage);
 		}
+		else if (mode == TransactionMode.OPEN) {
+			transactionManager.onOpenTransaction(transId, tradesInMessage);
+		}
 		else {
 			transactionManager.onFullTransaction(transId, tradesInMessage);
 		}
@@ -31,6 +34,7 @@ public class TradePersister implements MessageHandler {
 
 	static enum TransactionMode {
 		SINGLE,
+		OPEN,
 		FULL
 	}
 }

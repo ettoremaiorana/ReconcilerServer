@@ -1,6 +1,7 @@
 package com.fourcasters.forec.reconciler.server.persist;
 
 import java.io.File;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
@@ -9,14 +10,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
+import static com.fourcasters.forec.reconciler.server.FileConstants.*;
 
 public class TradeTaskFactory {
 
-	private static final File f = new File("Trades.csv");
+	private static final File f = new File(TRADES_FILE_NAME);
 	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
-
+	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
+	
 	public TradeTaskFactory(ApplicationInterface application) {
 	}
+
+
+	public OpenTradeTask newOpenTradeTask(String tradesInMessage, TransactionManager transactionManager,
+			int transId) {
+		return new OpenTradeTask(EMPTY_TASK);
+	}
+
 
 	public SingleTradeTask newSingleTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId) {
 		return new SingleTradeTask(new Runnable() {
@@ -82,6 +92,17 @@ public class TradeTaskFactory {
 		});
 	}
 
+	static class OpenTradeTask implements Runnable {
+		private final Runnable r;
+		private OpenTradeTask(Runnable r) {
+			this.r = r;
+		}
+		@Override
+		public void run() {
+			r.run();
+		}
+	}
+
 	static class SingleTradeTask implements Runnable {
 		private final Runnable r;
 		private SingleTradeTask(Runnable r) {
@@ -104,4 +125,5 @@ public class TradeTaskFactory {
 			r.run();
 		}
 	}
+
 }

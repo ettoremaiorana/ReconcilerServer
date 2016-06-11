@@ -16,6 +16,7 @@ public class TradePersisterTest {
 
 	private String topic = "Topic";
 	private String singleData = "12345=SINGLE=a,b,c,d,e,f";
+	private String openData = "12345=OPEN=a,b,c,d,e,f";
 	private String fullData = "67890=FULL=a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x";
 	private TradePersister persister;
 
@@ -31,6 +32,8 @@ public class TradePersisterTest {
 	public void onNewMessageANewTaskIsCreated() {
 		persister.enqueue(topic, singleData);
 		verify(transactionManager).onSingleTransaction(12345, "a,b,c,d,e,f");
+		persister.enqueue(topic, openData);
+		verify(transactionManager).onOpenTransaction(12345, "a,b,c,d,e,f");
 		persister.enqueue(topic, fullData);
 		verify(transactionManager).onFullTransaction(67890, "a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x");
 	}

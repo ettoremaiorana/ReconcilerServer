@@ -30,11 +30,12 @@ import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
+import static com.fourcasters.forec.reconciler.server.FileConstants.*;
 
 public class ReconcilerBroker {
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
-	private static final byte[] RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\n\r\n".getBytes();
+	private static final byte[] RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\nContent-Type: text/csv; charset=UTF-8\n\r\n".getBytes();
 	private static final Random random = new Random(System.currentTimeMillis());
 
 	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
@@ -217,7 +218,7 @@ public class ReconcilerBroker {
 		int response = httpParser.parseRequest();
 		if (response == 200 && httpParser.getRequestURL().equals("/history/csv")) {
 			LOG.info("Trades history requested in csv format");
-			sendFile(clientChannel, "Trades.csv");
+			sendFile(clientChannel, TRADES_FILE_NAME);
 
 		}
 		return response;
@@ -245,7 +246,7 @@ public class ReconcilerBroker {
 			tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
 			long position = 0;
 			do {
-				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256, tmpChannel);
+				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*16, tmpChannel);
 				position += transfered;
 			} while(position < file.length());
 			tmpChannel.force(true);
