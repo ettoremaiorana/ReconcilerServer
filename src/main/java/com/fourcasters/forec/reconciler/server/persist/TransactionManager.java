@@ -57,12 +57,18 @@ public class TransactionManager implements TransactionPhaseListener {
 
 
 	public void onOpenTransaction(int transId, String tradesInMessage) {
-		final OpenTradeTask task = taskFactory.newOpenTradeTask(tradesInMessage, this, transId);
-		final Deque<Runnable> tasks = new ArrayDeque<>(1);
-		tasks.add(task);
-		final Transaction t = new Transaction(tasks);
-		transactions.put(transId, t);
+		Transaction t = transactions.get(transId);
+		LOG.info("TransId " + transId + " -> t? " + t);
+		final OpenTradeTask task = taskFactory.newOpenTradeTask(tradesInMessage, this, transId, t == null);
+
+		if (t == null) {
+			final Deque<Runnable> tasks = new ArrayDeque<>(16);
+			t = new Transaction(tasks);
+			transactions.put(transId, t);
+		}
+		t.add(task);
 		onTaskStart();
+		LOG.info("tasksToRun? " + tasksToRun);
 	}
 
 	private final SelectorTask POLLING_TASK = new SelectorTask() {

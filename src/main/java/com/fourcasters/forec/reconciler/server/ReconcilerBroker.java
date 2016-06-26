@@ -78,7 +78,7 @@ public class ReconcilerBroker {
 			tasksProcessing();
 			selectorTaskProcessing();
 			//TODO Back off strategy
-			LockSupport.parkNanos(10_000_000L); //bleah
+			LockSupport.parkNanos(1_000_000L); //bleah
 		}
 		httpServer.close();
 		s.close();
@@ -216,10 +216,15 @@ public class ReconcilerBroker {
 
 	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
 		int response = httpParser.parseRequest();
-		if (response == 200 && httpParser.getRequestURL().equals("/history/csv")) {
-			LOG.info("Trades history requested in csv format");
-			sendFile(clientChannel, TRADES_FILE_NAME);
-
+		if (response == 200){
+			if (httpParser.getRequestURL().equals("/history/csv")) {
+				LOG.info("Trades history requested in csv format");
+				sendFile(clientChannel, CLOSED_TRADES_FILE_NAME);
+			}
+			else if(httpParser.getRequestURL().equals("/open/csv")){
+				LOG.info("Open trades requested in csv format");
+				sendFile(clientChannel, OPEN_TRADES_FILE_NAME);
+			}
 		}
 		return response;
 	}
@@ -254,7 +259,7 @@ public class ReconcilerBroker {
 			do {
 				long transfered = readChannel.transferTo(position, position + 256, clientChannel);
 				position += transfered;
-				LOG.debug("Looping...");
+				LOG.debug("Sending...");
 			} while(position < envelopTmp.length());
 			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
 			

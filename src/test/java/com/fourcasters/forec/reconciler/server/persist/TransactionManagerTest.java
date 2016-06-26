@@ -3,7 +3,6 @@ package com.fourcasters.forec.reconciler.server.persist;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -71,7 +70,6 @@ public class TransactionManagerTest {
 		assertEquals(1, application.selectorTasks().size()); //decrease tasksToRun
 	}
 
-	@Ignore
 	@Test
 	public void onNewOpenTaskTransactionIsAddedAndThenRemoved() {
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
