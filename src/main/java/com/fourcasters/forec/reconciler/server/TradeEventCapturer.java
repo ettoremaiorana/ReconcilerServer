@@ -16,6 +16,7 @@ public class TradeEventCapturer implements MessageHandler {
 
 	private final static String PASSWORD = System.getProperty("mail.password");
 	private final static Logger LOG = LogManager.getLogger(TradeEventCapturer.class);
+	private final static byte[] OPEN_IN_BYTES = "OPEN".getBytes();
 	private final ApplicationInterface application;
 	private final Context ctx;
 	private final Socket socket;;
@@ -29,12 +30,11 @@ public class TradeEventCapturer implements MessageHandler {
 
 	@Override
 	public void enqueue(String topic, String data) {
+		final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
+
 		final Future<?> future = application.executor().submit(new Runnable() {
 			@Override
 			public void run() {
-
-				final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
-
 
 				//example: buffer = status + "," + type + "," + price + "," + ticket;
 				final long ticket = Long.parseLong(data.split(",")[3].trim());
@@ -73,6 +73,20 @@ public class TradeEventCapturer implements MessageHandler {
 			}
 		});
 		application.futureTasks().add(future);
+
+		final Future<?> openTradesFuture = application.executor().submit(new Runnable() {
+			@Override
+			public void run() {
+
+				//TODO final String message = "ticket="+ticket;
+				final String message = "OPEN";
+				LOG.info("Sending '" + message + "' on topic " + newTopic);
+				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
+				socket.send(OPEN_IN_BYTES, 0);
+			}
+
+		});
+		application.futureTasks().add(openTradesFuture);
 	}
 
 }
