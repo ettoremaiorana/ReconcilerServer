@@ -42,7 +42,6 @@ public class TradeEventCapturer implements MessageHandler {
 				final int algoId = Integer.parseInt(topic.split("@")[2].trim());
 				sendEmail(algoId, ticket, data);
 				
-				//TODO final String message = "ticket="+ticket;
 				final String message = "SINGLE="+ticket;
 				LOG.info("Sending '" + message + "' on topic " + newTopic);
 				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
@@ -78,7 +77,6 @@ public class TradeEventCapturer implements MessageHandler {
 			@Override
 			public void run() {
 
-				//TODO final String message = "ticket="+ticket;
 				final String message = "OPEN";
 				LOG.info("Sending '" + message + "' on topic " + newTopic);
 				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
