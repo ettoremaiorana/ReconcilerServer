@@ -130,7 +130,7 @@ public class ReconcilerBroker {
 							} else {
 								final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
 								client = clientChannel.socket();
-								client.setSendBufferSize(256);
+								client.setSendBufferSize(2048);
 								client.setSoTimeout(3000);
 								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 								httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
@@ -251,13 +251,13 @@ public class ReconcilerBroker {
 			tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
 			long position = 0;
 			do {
-				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*16, tmpChannel);
+				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*8, tmpChannel);
 				position += transfered;
 			} while(position < file.length());
 			tmpChannel.force(true);
 			position = 0;
 			do {
-				long transfered = readChannel.transferTo(position, position + 256, clientChannel);
+				long transfered = readChannel.transferTo(position, position + 256*8, clientChannel);
 				position += transfered;
 				LOG.debug("Sending...");
 			} while(position < envelopTmp.length());
