@@ -257,7 +257,7 @@ public class ReconcilerBroker {
 			tmpChannel.force(true);
 			position = 0;
 			do {
-				long transfered = readChannel.transferTo(position, position + 256, clientChannel);
+				long transfered = readChannel.transferTo(position, position + 256*16, clientChannel);
 				position += transfered;
 				LOG.debug("Sending...");
 			} while(position < envelopTmp.length());
