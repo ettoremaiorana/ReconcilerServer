@@ -2,6 +2,7 @@ package com.fourcasters.forec.reconciler.server;
 
 import java.util.concurrent.Future;
 
+
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
@@ -12,10 +13,12 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
+import com.fourcasters.forec.reconciler.server.cli.PerformanceCalc.PerformanceCalcTask;;
+
 public class TradeEventCapturer implements MessageHandler {
 
 	private final static String PASSWORD = System.getProperty("mail.password");
-	private final static Logger LOG = LogManager.getLogger(TradeEventCapturer.class);
+	private final static Logger LOG = LogManager.getLogger(TradeEventCapturerTest.class);
 	private final static byte[] OPEN_IN_BYTES = "OPEN".getBytes();
 	private final ApplicationInterface application;
 	private final Context ctx;
@@ -73,18 +76,20 @@ public class TradeEventCapturer implements MessageHandler {
 		});
 		application.futureTasks().add(future);
 
-		final Future<?> openTradesFuture = application.executor().submit(new Runnable() {
-			@Override
-			public void run() {
-
+		final Future<?> openTradesFuture = application.executor().submit(
+			() -> {
 				final String message = "OPEN";
 				LOG.info("Sending '" + message + "' on topic " + newTopic);
 				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
 				socket.send(OPEN_IN_BYTES, 0);
 			}
 
-		});
+		);
 		application.futureTasks().add(openTradesFuture);
+
+		final Future<?> perfCalcFuture = application.executor().submit(new PerformanceCalcTask(topic, application));
+		application.futureTasks().add(perfCalcFuture);
+
 	}
 
 }

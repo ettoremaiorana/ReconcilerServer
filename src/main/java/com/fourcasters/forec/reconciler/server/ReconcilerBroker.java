@@ -94,10 +94,12 @@ public class ReconcilerBroker {
 	}
 
 	private static void tasksProcessing() {
-		application.futureTasks().removeIf(
-				f -> {
-					return f.isDone() && logIfException(f);
-				});
+		if (application.futureTasks().size() > 0) {
+			application.futureTasks().removeIf(
+					f -> {
+							return f.isDone() && logIfException(f);
+						});
+		}
 	}
 
 	private static boolean logIfException(Future<?> f) {
