@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
@@ -17,11 +18,12 @@ public class TradeEventCapturerTest {
 
 	private TradeEventCapturer capture;
 	private ApplicationMock application;
+	@Mock private ReconcilerMessageSender sender;
 
 	@Before
 	public void setup() {
 		application = new ApplicationMock();
-		capture = new TradeEventCapturer(application);
+		capture = new TradeEventCapturer(application, sender);
 	}
 
 	@Test

@@ -4,9 +4,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
@@ -15,7 +15,7 @@ public class Application implements ApplicationInterface {
 
 	private static final Context context = ZMQ.context(1);
 	//Thread pool executing async tasks
-	private static final ExecutorService executor = Executors.newFixedThreadPool(Integer.getInteger("pool.thread.count", 1));
+	private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(Integer.getInteger("pool.thread.count", 1));
 	//Queue of pending tasks. Not thread safe, but doesn't matter here because offer/poll is performed by a single thread.
 	private static final Deque<Future<?>> futureTasks = new ArrayDeque<>(512);
 	//Queue of tasks to be executed by the main thread, so to avoid lock and contention.
@@ -25,7 +25,7 @@ public class Application implements ApplicationInterface {
 		return context;
 	}
 	@Override
-	public ExecutorService executor() {
+	public ScheduledExecutorService executor() {
 		return executor;
 	}
 	@Override

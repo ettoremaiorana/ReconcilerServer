@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import org.apache.logging.log4j.LogManager;
@@ -54,21 +55,24 @@ public class ReconcilerBroker {
 	private static boolean running;
 	private static String topicName;
 	private static String data;
-	private static MessageHandlerFactory handlers = new MessageHandlerFactory(application);
+	private static MessageHandlerFactory handlers; 
 	private static SelectionKey key;
+	private static ReconcilerMessageSender reconcMessagesender;
 
 	public static void main(String[] args) throws IOException {
 		final Context ctx = application.context();
 		final Socket server = zmqSetup(ctx);
 		final Socket newTradesListener = zmqSetupListener(ctx);
-
 		final Selector s = Selector.open();
 		final ServerSocketChannel httpServer = httpServerSetup(s);
-
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
 		LOG.info("Zmq  server listening on port 51125");
 
-		//start listening to messages
+		reconcMessagesender = new ReconcilerMessageSender(application);
+		handlers = new MessageHandlerFactory(application, reconcMessagesender);
+
+		application.executor().scheduleAtFixedRate(command, 300L, 300L, TimeUnit.SECONDS);
+
 		running = true;
 		while (running) {
 			zmqEventHandling(server, newTradesListener);
@@ -278,7 +282,6 @@ public class ReconcilerBroker {
 		}
 	}
 
-
 	private static int read(final Socket server) throws UnsupportedEncodingException {
 		TOPIC_BUFFER.flip();
 		TOPIC_BUFFER.get(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit()); //read only the bits just read
@@ -293,4 +296,13 @@ public class ReconcilerBroker {
 		return recvDataSize;
 	}
 
+	private static final Runnable command = new Runnable() {
+
+		@Override
+		public void run() {
+			LOG.info("New scheduled task, asking for open trades");
+			reconcMessagesender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+		}
+		
+	};
 }
