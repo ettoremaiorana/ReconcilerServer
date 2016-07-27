@@ -301,8 +301,15 @@ public class ReconcilerBroker {
 		@Override
 		public void run() {
 			LOG.info("New scheduled task, asking for open trades");
-			reconcMessagesender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+			final Future<?> f = application.executor().submit(
+					() -> reconcMessagesender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
+			);
+			application.selectorTasks().add(new SelectorTask() {
+				@Override
+				public void run() {
+					application.futureTasks().add(f);
+				}
+			});
 		}
-		
 	};
 }

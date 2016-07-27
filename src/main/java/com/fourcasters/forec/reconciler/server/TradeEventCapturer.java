@@ -33,16 +33,20 @@ public class TradeEventCapturer implements MessageHandler {
 		//example: topic = topic_name + "@" + cross + "@" + algo_id
 		final int algoId = Integer.parseInt(topic.split("@")[2].trim());
 
-		final Future<?> future = application.executor().submit(
+		final Future<?> closedTradesfuture = application.executor().submit(
 			() -> {
 				sendEmail(algoId, ticket, data);
-				new ReconcilerMessageSender(application).askForClosedTrades(String.valueOf(ticket), newTopic);
+				final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
+				System.out.println("closedTradesFuture result = " + result);
 			}
 		);
-		application.futureTasks().add(future);
+		application.futureTasks().add(closedTradesfuture);
 
 		final Future<?> openTradesFuture = application.executor().submit(
-			() -> {messageSender.askForOpenTrades(newTopic);}
+			() -> {
+				final boolean result = messageSender.askForOpenTrades(newTopic);
+				System.out.println("openTradesFuture result = " + result);
+			}
 		);
 		application.futureTasks().add(openTradesFuture);
 
