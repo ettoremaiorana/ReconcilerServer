@@ -15,7 +15,7 @@ public class PerformanceCalc {
 
 	public static class PerformanceCalcTask implements Runnable {
 		private static final Logger LOG = LogManager.getLogger(PerformanceCalc.class);
-		private static final boolean exeExist = new File("performance.exe").exists();
+		private static final boolean exeExist = new File("performancecalc.exe").exists();
 		private static final boolean isWindows = System.getProperty("os.name").contains("Windows");
 		private Process proc;
 		private final ProcessBuilder pb;
