@@ -20,6 +20,7 @@ public class PerformanceCalc {
 		private Process proc;
 		private final ProcessBuilder pb;
 		private final ApplicationInterface application;
+		int backoffTime = 50;
 
 		public PerformanceCalcTask (String topic, ApplicationInterface application) {
 			//example: topic = topic_name + "@" + cross + "@" + algo_id
@@ -49,14 +50,20 @@ public class PerformanceCalc {
 			}
 			LOG.info("Checking for matlab to calculate performance");
 			try {
-				if (!proc.waitFor(50, TimeUnit.MILLISECONDS)) {
+				if (!proc.waitFor(backoffTime, TimeUnit.MILLISECONDS)) {
 					LOG.info("Performance calculation is not yet completed");
 					application.selectorTasks().offer(new SelectorTask() {
 						@Override
 						public void run() {
-							application.futureTasks().add(
-									application.executor().submit(PerformanceCalcTask.this)
-							);
+							if (PerformanceCalcTask.this.backoffTime < 3200) {
+								PerformanceCalcTask.this.backoffTime *= 2;
+								application.futureTasks().add(
+										application.executor().submit(PerformanceCalcTask.this)
+								);
+							}
+							else {
+								proc.destroy();
+							}
 						}
 					});
 				}

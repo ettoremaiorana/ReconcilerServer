@@ -4,9 +4,13 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
         </Console>
-        <File name="File" fileName="all.log" immediateFlush="true" append="true">
+        <RollingFile name="File" fileName="reconciler.log" immediateFlush="false" append="true" filePattern="logs/app-%d{MM-dd-yyyy}.log.gz">
             <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </File>
+	    	<Policies>
+	        	<SizeBasedTriggeringPolicy size="25 MB"/>
+	      	</Policies>
+	      	<DefaultRolloverStrategy max="4"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Root level="debug">

@@ -1,5 +1,20 @@
 package com.fourcasters.forec.reconciler.server;
 
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CLOSED_TRADES_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.MT4_TOPIC_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NEW_TRADES_TOPIC_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_HEADER;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.OPEN_TRADES_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RECONCILER_TOPIC_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_HEADER;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.PERFORMANCE_FILE_NAME;
+
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +33,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.Random;
@@ -31,19 +48,14 @@ import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
-import static com.fourcasters.forec.reconciler.server.FileConstants.*;
 
 public class ReconcilerBroker {
+
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
-	private static final byte[] RESPONSE_OK_HEADER = "HTTP/1.1 200 OK\nContent-Type: text/csv; charset=UTF-8\n\r\n".getBytes();
-	private static final Random random = new Random(System.currentTimeMillis());
 
-	private static final String HISTORY_TOPIC_NAME = "HISTORY@";
-	private static final String RECONCILER_TOPIC_NAME = "RECONC@";
-	private static final String NEW_TRADES_TOPIC_NAME = "STATUS@";
-	private static final String LOG_INFO_TOPIC_NAME = "LOGS@INFO";
-	private static final String MT4_TOPIC_NAME = "MT4@";
+
+	private static final Random random = new Random(System.currentTimeMillis());
 
 
 	private static final int bufferSize = 10240*5;
@@ -57,7 +69,7 @@ public class ReconcilerBroker {
 	private static String data;
 	private static MessageHandlerFactory handlers; 
 	private static SelectionKey key;
-	private static ReconcilerMessageSender reconcMessagesender;
+	private static ReconcilerMessageSender reconcMessageSender;
 
 	public static void main(String[] args) throws IOException {
 		final Context ctx = application.context();
@@ -68,8 +80,8 @@ public class ReconcilerBroker {
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
 		LOG.info("Zmq  server listening on port 51125");
 
-		reconcMessagesender = new ReconcilerMessageSender(application);
-		handlers = new MessageHandlerFactory(application, reconcMessagesender);
+		reconcMessageSender = new ReconcilerMessageSender(application);
+		handlers = new MessageHandlerFactory(application, reconcMessageSender);
 
 		application.executor().scheduleAtFixedRate(command, 300L, 300L, TimeUnit.SECONDS);
 
@@ -101,8 +113,8 @@ public class ReconcilerBroker {
 		if (application.futureTasks().size() > 0) {
 			application.futureTasks().removeIf(
 					f -> {
-							return f.isDone() && logIfException(f);
-						});
+						return f.isDone() && logIfException(f);
+					});
 		}
 	}
 
@@ -149,13 +161,13 @@ public class ReconcilerBroker {
 						throw new RuntimeException(e);
 					}
 					finally {
-							try {
-								if (httpWriter != null) httpWriter.close();
-								if (httpReader != null) httpReader.close();
-								if (client != null) client.close();
-							} catch (IOException e) {
-								throw new RuntimeException(e);
-							}
+						try {
+							if (httpWriter != null) httpWriter.close();
+							if (httpReader != null) httpReader.close();
+							if (client != null) client.close();
+						} catch (IOException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 			});
@@ -225,11 +237,38 @@ public class ReconcilerBroker {
 		if (response == 200){
 			if (httpParser.getRequestURL().equals("/history/csv")) {
 				LOG.info("Trades history requested in csv format");
-				sendFile(clientChannel, CLOSED_TRADES_FILE_NAME);
+				sendFile(clientChannel, RESPONSE_OK_HEADER, CLOSED_TRADES_FILE_NAME);
 			}
 			else if(httpParser.getRequestURL().equals("/open/csv")){
 				LOG.info("Open trades requested in csv format");
-				sendFile(clientChannel, OPEN_TRADES_FILE_NAME);
+				sendFile(clientChannel, RESPONSE_OK_HEADER, OPEN_TRADES_FILE_NAME);
+			}
+			else if (httpParser.getRequestURL().equals("/performance")) {
+				LOG.info("Performace file requested");
+				if(!httpParser.getMethod().equals("GET")) {
+					response = 405;
+					LOG.error("Method must be GET");
+					sendFile(clientChannel, WRONG_METHOD_HEADER, WRONG_METHOD_FILE_NAME);
+				}
+				else {
+					final String magicAsString = httpParser.getParam("magic");
+					if (magicAsString == null) {
+						response = 404;
+						LOG.error("Magic must be a paremeter");
+						sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+					}
+					else {
+						final String fileName = magicAsString + PERFORMANCE_FILE_NAME;
+						if (!Files.exists(Paths.get(fileName))) {
+							response = 404;
+							LOG.error("Magic " + magicAsString +" is not a number");
+							sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+						}
+						else {
+							sendFile(clientChannel, RESPONSE_OK_HEADER, fileName);
+						}
+					}
+				}
 			}
 		}
 		return response;
@@ -237,7 +276,7 @@ public class ReconcilerBroker {
 
 
 
-	private static void sendFile(final SocketChannel clientChannel, String fileName) throws IOException {
+	private static void sendFile(final SocketChannel clientChannel, byte[] header, String fileName) throws IOException {
 		FileChannel tmpChannel = null;
 		FileChannel readChannel = null;
 		File envelopTmp = null;
@@ -254,7 +293,7 @@ public class ReconcilerBroker {
 			envelopTmp.deleteOnExit();
 			tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
 			readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
-			tmpChannel.write(ByteBuffer.wrap(RESPONSE_OK_HEADER));
+			tmpChannel.write(ByteBuffer.wrap(header));
 			long position = 0;
 			do {
 				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*8, tmpChannel);
@@ -268,7 +307,7 @@ public class ReconcilerBroker {
 				LOG.debug("Sending...");
 			} while(position < envelopTmp.length());
 			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
-			
+
 		}
 		finally {
 			if(tmpChannel != null) tmpChannel.close();
@@ -277,7 +316,7 @@ public class ReconcilerBroker {
 				if(!envelopTmp.delete()) {
 					LOG.warn("Unable to delete temporary file {}", envelopTmp.getAbsoluteFile());
 				}
-					
+
 			}
 		}
 	}
@@ -302,8 +341,8 @@ public class ReconcilerBroker {
 		public void run() {
 			LOG.info("New scheduled task, asking for open trades");
 			final Future<?> f = application.executor().submit(
-					() -> reconcMessagesender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
-			);
+					() -> reconcMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
+					);
 			application.selectorTasks().add(new SelectorTask() {
 				@Override
 				public void run() {

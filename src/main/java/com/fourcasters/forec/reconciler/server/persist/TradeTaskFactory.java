@@ -10,7 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
-import static com.fourcasters.forec.reconciler.server.FileConstants.*;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.*;
 
 public class TradeTaskFactory {
 
