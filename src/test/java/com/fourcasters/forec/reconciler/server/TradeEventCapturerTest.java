@@ -1,6 +1,7 @@
 package com.fourcasters.forec.reconciler.server;
 
 import static org.mockito.Matchers.isA;
+
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -19,11 +20,12 @@ public class TradeEventCapturerTest {
 	private TradeEventCapturer capture;
 	private ApplicationMock application;
 	@Mock private ReconcilerMessageSender sender;
+	@Mock private StrategiesTracker strTracker;
 
 	@Before
 	public void setup() {
 		application = new ApplicationMock();
-		capture = new TradeEventCapturer(application, sender);
+		capture = new TradeEventCapturer(application, sender, strTracker);
 	}
 
 	@Test
@@ -32,6 +34,8 @@ public class TradeEventCapturerTest {
 		String data  = "status" + "," + "1" + "," + "87678" + "," + "987654321";
 		capture.enqueue(topic, data);
 		verify(application.executor(), times(1)).submit(isA(PerformanceCalcTask.class));
+		verify(application.executor(), times(1)).submit(isA(StrategiesCaptureTask.class));
+		
 	}
 
 }

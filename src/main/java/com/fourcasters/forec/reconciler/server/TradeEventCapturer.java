@@ -18,11 +18,13 @@ public class TradeEventCapturer implements MessageHandler {
 
 	private final ApplicationInterface application;
 	private final ReconcilerMessageSender messageSender;
+	private final StrategiesTracker strategiesTracker;
 
 
-	public TradeEventCapturer(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender) {
+	public TradeEventCapturer(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender, StrategiesTracker strategiesTracker) {
 		this.application = application;
 		this.messageSender = reconcMessageSender;
+		this.strategiesTracker = strategiesTracker;
 	}
 
 	@Override
@@ -52,6 +54,10 @@ public class TradeEventCapturer implements MessageHandler {
 
 		final Future<?> perfCalcFuture = application.executor().submit(new PerformanceCalcTask(topic, application));
 		application.futureTasks().add(perfCalcFuture);
+
+		final Future<?> strategiesCaptureFuture = application.executor().submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
+		application.futureTasks().add(strategiesCaptureFuture);
+
 
 	}
 
