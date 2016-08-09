@@ -36,6 +36,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -70,6 +71,8 @@ public class ReconcilerBroker {
 	private static MessageHandlerFactory handlers; 
 	private static SelectionKey key;
 	private static ReconcilerMessageSender reconcMessageSender;
+	private static StrategiesTracker stratgiesTracker;
+	
 
 	public static void main(String[] args) throws IOException {
 		final Context ctx = application.context();
@@ -81,7 +84,8 @@ public class ReconcilerBroker {
 		LOG.info("Zmq  server listening on port 51125");
 
 		reconcMessageSender = new ReconcilerMessageSender(application);
-		handlers = new MessageHandlerFactory(application, reconcMessageSender);
+		stratgiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
+		handlers = new MessageHandlerFactory(application, reconcMessageSender, stratgiesTracker);
 
 		application.executor().scheduleAtFixedRate(command, 300L, 300L, TimeUnit.SECONDS);
 
@@ -235,7 +239,11 @@ public class ReconcilerBroker {
 	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
 		int response = httpParser.parseRequest();
 		if (response == 200){
-			if (httpParser.getRequestURL().equals("/history/csv")) {
+			if (httpParser.getRequestURL().equals("/strategies")) {
+				LOG.info("Set of strategies requested");
+				sendString(clientChannel, Arrays.toString(stratgiesTracker.getStrategies()));
+			}
+			else if (httpParser.getRequestURL().equals("/history/csv")) {
 				LOG.info("Trades history requested in csv format");
 				sendFile(clientChannel, RESPONSE_OK_HEADER, CLOSED_TRADES_FILE_NAME);
 			}
@@ -275,6 +283,11 @@ public class ReconcilerBroker {
 	}
 
 
+
+	private static void sendString(SocketChannel clientChannel, String response) throws IOException {
+		clientChannel.write(ByteBuffer.wrap(response.getBytes(CHARSET)));
+		clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
+	}
 
 	private static void sendFile(final SocketChannel clientChannel, byte[] header, String fileName) throws IOException {
 		FileChannel tmpChannel = null;

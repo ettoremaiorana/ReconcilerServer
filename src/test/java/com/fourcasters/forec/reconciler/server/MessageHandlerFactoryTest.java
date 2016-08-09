@@ -13,7 +13,8 @@ import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
 public class MessageHandlerFactoryTest {
 
 	@Mock private ReconcilerMessageSender rms;
-	private MessageHandlerFactory mhf = new MessageHandlerFactory(new ApplicationMock(), rms);
+	@Mock private StrategiesTracker strTracker;
+	private MessageHandlerFactory mhf = new MessageHandlerFactory(new ApplicationMock(), rms, strTracker);
 	
 	@Test
 	public void test() {

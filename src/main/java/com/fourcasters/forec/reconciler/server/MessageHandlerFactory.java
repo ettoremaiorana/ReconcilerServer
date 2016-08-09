@@ -14,10 +14,10 @@ public class MessageHandlerFactory {
 	private final Mt4HandlerFactory mt4HandlerFactory;
 	private final Identity identity;
 
-	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender) {
+	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender, StrategiesTracker strategiesTracker) {
 		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application), application), application);
 		forwarder = new Forwarder(application);
-		tradeAppender = new TradeEventCapturer(application, reconcMessageSender);
+		tradeAppender = new TradeEventCapturer(application, reconcMessageSender, strategiesTracker);
 		logger = new Logger();
 		mt4HandlerFactory = new Mt4HandlerFactory();
 		identity = new Identity();
