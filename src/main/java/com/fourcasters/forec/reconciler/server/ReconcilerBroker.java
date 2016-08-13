@@ -146,7 +146,7 @@ public class ReconcilerBroker {
 								client = clientChannel.socket();
 								client.setSendBufferSize(2048);
 								client.setSoTimeout(3000);
-								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
+								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream(), CHARSET));
 								final HttpParser httpParser = new HttpParser(httpReader);
 								int response = respond(clientChannel, httpParser);
 								LOG.info(response);

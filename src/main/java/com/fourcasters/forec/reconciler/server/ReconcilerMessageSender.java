@@ -21,7 +21,7 @@ public class ReconcilerMessageSender {
 	public boolean askForClosedTrades(String ticket, String topic) {
 		final String message = "SINGLE="+ticket;
 		LOG.info("Sending '" + message + "' on topic " + topic);
-		socket.send(topic.getBytes(), ZMQ.SNDMORE);
+		socket.send(topic.getBytes(CHARSET), ZMQ.SNDMORE);
 		return socket.send(message.getBytes(CHARSET), 0);
 	}
 
