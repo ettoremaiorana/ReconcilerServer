@@ -1,5 +1,5 @@
 package com.fourcasters.forec.reconciler.server;
-
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CLOSED_TRADES_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
@@ -8,12 +8,11 @@ import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NEW_TRAD
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_HEADER;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.OPEN_TRADES_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.PERFORMANCE_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RECONCILER_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_HEADER;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.PERFORMANCE_FILE_NAME;
-
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,7 +31,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -64,7 +62,6 @@ public class ReconcilerBroker {
 	private static final byte[] DATA_IN_INPUT = new byte[bufferSize];
 	private static final ByteBuffer TOPIC_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
 	private static final ByteBuffer DATA_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
-	private static final Charset CHARSET = Charset.forName("US-ASCII");
 	private static boolean running;
 	private static String topicName;
 	private static String data;
@@ -216,10 +213,10 @@ public class ReconcilerBroker {
 	private static Socket zmqSetup(final Context ctx) {
 		final Socket server = ctx.socket(ZMQ.SUB);
 		server.bind("tcp://*:51125");
-		server.subscribe(HISTORY_TOPIC_NAME.getBytes());
-		server.subscribe(RECONCILER_TOPIC_NAME.getBytes());
-		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
-		server.subscribe(MT4_TOPIC_NAME.getBytes());
+		server.subscribe(HISTORY_TOPIC_NAME.getBytes(CHARSET));
+		server.subscribe(RECONCILER_TOPIC_NAME.getBytes(CHARSET));
+		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes(CHARSET));
+		server.subscribe(MT4_TOPIC_NAME.getBytes(CHARSET));
 
 		return server;
 	}
@@ -228,9 +225,9 @@ public class ReconcilerBroker {
 	private static Socket zmqSetupListener(final Context ctx) {
 		final Socket listener = ctx.socket(ZMQ.SUB);
 		listener.connect("tcp://localhost:50027");
-		listener.subscribe(NEW_TRADES_TOPIC_NAME.getBytes());
+		listener.subscribe(NEW_TRADES_TOPIC_NAME.getBytes(CHARSET));
 		if (Boolean.getBoolean("log.info")) {
-			listener.subscribe(LOG_INFO_TOPIC_NAME.getBytes());
+			listener.subscribe(LOG_INFO_TOPIC_NAME.getBytes(CHARSET));
 		}
 		return listener;
 	}
@@ -286,7 +283,7 @@ public class ReconcilerBroker {
 
 	private static void sendString(SocketChannel clientChannel, String response) throws IOException {
 		clientChannel.write(ByteBuffer.wrap(response.getBytes(CHARSET)));
-		clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
+		clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
 	}
 
 	private static void sendFile(final SocketChannel clientChannel, byte[] header, String fileName) throws IOException {
@@ -319,7 +316,7 @@ public class ReconcilerBroker {
 				position += transfered;
 				LOG.debug("Sending...");
 			} while(position < envelopTmp.length());
-			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes()));
+			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
 
 		}
 		finally {

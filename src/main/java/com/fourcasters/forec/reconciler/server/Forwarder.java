@@ -24,8 +24,8 @@ public class Forwarder implements MessageHandler {
 			@Override
 			public void run() {
 				final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
-				socket.send(newTopic.getBytes(), ZMQ.SNDMORE);
-				socket.send(message.getBytes(), 0);		
+				socket.send(newTopic.getBytes(ProtocolConstants.CHARSET), ZMQ.SNDMORE);
+				socket.send(message.getBytes(ProtocolConstants.CHARSET), 0);		
 			}
 		});
 		application.futureTasks().offer(f);

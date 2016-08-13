@@ -1,16 +1,17 @@
 package com.fourcasters.forec.reconciler.server.persist;
 
-import java.io.File;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CLOSED_TRADES_FILE_NAME;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.OPEN_TRADES_FILE_NAME;
 
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileOutputStream;
-import java.io.PrintWriter;
+import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.*;
 
 public class TradeTaskFactory {
 
@@ -39,22 +40,17 @@ public class TradeTaskFactory {
 			@Override
 			public void run() {
 				final String[] trades = tradesInMessage.split("\\|");
-				//if last bit of data is not 'more', we create a new selector task to end the transaction
-				final boolean autoflush = false;
-				if (trades[trades.length - 1].trim().equals("more")) {
-					trades[trades.length - 1] = "";
-				}
-				try(final PrintWriter pw = new PrintWriter(new FileOutputStream(closed_trades_file, true), autoflush);) {
+				try(final FileOutputStream pw = new FileOutputStream(closed_trades_file, true);) {
 					for (int i = 0; i < trades.length-1; i++) {
 						if (!trades[i].trim().equals("")) {
-							pw.write(trades[i]);
+							pw.write(trades[i].getBytes(CHARSET));
 						}
-						pw.write(",\n");
+						pw.write(",\n".getBytes(CHARSET));
 					}
-					pw.write(trades[trades.length - 1]);
+					pw.write(trades[trades.length - 1].getBytes(CHARSET));
 					pw.flush();
-				} catch (FileNotFoundException e) {
-					throw new RuntimeException(e);
+				} catch (IOException e) {
+					throw new RuntimeException("Unable to append new trade", e);
 				} finally {
 					listener.onTaskEnd();
 					listener.onTransactionEnd(transId);
@@ -64,14 +60,14 @@ public class TradeTaskFactory {
 	}
 
 	private static class MultiPartsTransaction implements Runnable {
-		private final File f;
+		private final File file;
 		private final boolean first;
 		private final int transId;
 		private final TransactionPhaseListener listener;
 		private final String tradesInMessage;
 
 		private MultiPartsTransaction(String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first, File f) {
-			this.f = f;
+			this.file = f;
 			this.tradesInMessage = tradesInMessage;
 			this.listener = listener;
 			this.transId = transId;
@@ -82,22 +78,22 @@ public class TradeTaskFactory {
 		public void run() {
 			final String[] trades = tradesInMessage.split("\\|");
 			//if last bit of data is not 'more', we create a new selector task to end the transaction
-			final boolean autoflush = false;
+			final boolean append = !first;
 			final boolean toBeContinued = trades[trades.length - 1].trim().equals("more");
 			if (toBeContinued) {
 				trades[trades.length - 1] = "";
 			}
-			try(final PrintWriter pw = new PrintWriter(new FileOutputStream(f, !first), autoflush);) {
+			try(final FileOutputStream pw = new FileOutputStream(file, append);) {
 				for (int i = 0; i < trades.length-1; i++) {
 					if (!trades[i].trim().equals("")) {
-						pw.write(trades[i]);
+						pw.write(trades[i].getBytes(CHARSET));
 					}
-					pw.write(",\n");
+					pw.write(",\n".getBytes(CHARSET));
 				}
-				pw.write(trades[trades.length - 1]);
+				pw.write(trades[trades.length - 1].getBytes(CHARSET));
 				pw.flush();
-			} catch (FileNotFoundException e) {
-				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException("Unable to write", e);
 			}
 			finally {
 				listener.onTaskEnd();
