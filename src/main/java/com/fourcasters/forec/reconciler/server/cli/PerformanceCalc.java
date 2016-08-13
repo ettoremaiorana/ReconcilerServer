@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fourcasters.forec.reconciler.server.Application;
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
 
@@ -14,6 +13,7 @@ public class PerformanceCalc {
 
 
 	public static class PerformanceCalcTask implements Runnable {
+
 		private static final Logger LOG = LogManager.getLogger(PerformanceCalc.class);
 		private static final boolean exeExist = new File("performancecalc.exe").exists();
 		private static final boolean isWindows = System.getProperty("os.name").contains("Windows");
@@ -52,7 +52,7 @@ public class PerformanceCalc {
 			try {
 				if (!proc.waitFor(backoffTime, TimeUnit.MILLISECONDS)) {
 					LOG.info("Performance calculation is not yet completed");
-					application.selectorTasks().offer(new SelectorTask() {
+					application.selectorTasks().add(new SelectorTask() {
 						@Override
 						public void run() {
 							if (PerformanceCalcTask.this.backoffTime < 3200) {
@@ -74,9 +74,12 @@ public class PerformanceCalc {
 				throw new RuntimeException(e);
 			}
 		}
+
+		@Override
+		public String toString() {
+			return "PerformanceCalcTask [proc=" + proc + ", pb=" + pb + ", application=" + application
+					+ ", backoffTime=" + backoffTime + "]";
+		}
 	}
 
-	public static void main(String[] args) {
-		new PerformanceCalc.PerformanceCalcTask("topic" + "@" + "ABCDEF" + "@" + "76543210", new Application()).run();
-	}
 }

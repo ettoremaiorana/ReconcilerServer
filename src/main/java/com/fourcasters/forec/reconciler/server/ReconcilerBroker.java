@@ -18,14 +18,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -136,7 +132,6 @@ public class ReconcilerBroker {
 				@Override
 				public void run() {
 					BufferedReader httpReader = null;
-					PrintWriter httpWriter = null;
 					java.net.Socket client = null;
 					try {
 						LOG.info("Request received");
@@ -152,7 +147,6 @@ public class ReconcilerBroker {
 								client.setSendBufferSize(2048);
 								client.setSoTimeout(3000);
 								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-								httpWriter = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
 								final HttpParser httpParser = new HttpParser(httpReader);
 								int response = respond(clientChannel, httpParser);
 								LOG.info(response);
@@ -163,7 +157,6 @@ public class ReconcilerBroker {
 					}
 					finally {
 						try {
-							if (httpWriter != null) httpWriter.close();
 							if (httpReader != null) httpReader.close();
 							if (client != null) client.close();
 						} catch (IOException e) {
@@ -198,14 +191,24 @@ public class ReconcilerBroker {
 
 
 
-	private static ServerSocketChannel httpServerSetup(Selector s)
-			throws IOException, SocketException, ClosedChannelException {
-		ServerSocketChannel httpServer = ServerSocketChannel.open();
-		httpServer.configureBlocking(false);
-		httpServer.bind(new InetSocketAddress(Integer.getInteger("http.port", 8080)));
-		httpServer.socket().setReceiveBufferSize(1024);
-		key = httpServer.register(s, SelectionKey.OP_ACCEPT);
-		return httpServer;
+	private static ServerSocketChannel httpServerSetup(Selector s) {
+		ServerSocketChannel httpServer = null;
+		try {
+			httpServer = ServerSocketChannel.open();
+			httpServer.configureBlocking(false);
+			httpServer.bind(new InetSocketAddress(Integer.getInteger("http.port", 8080)));
+			httpServer.socket().setReceiveBufferSize(1024);
+			key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+			return httpServer;
+		}
+		catch (IOException e) {
+			if (httpServer != null) {
+				try {
+					httpServer.close();
+				} catch (IOException e1) {}
+			}
+			throw new RuntimeException("Unable to allocate new http server socket", e);
+		}
 	}
 
 
@@ -293,11 +296,8 @@ public class ReconcilerBroker {
 		try {
 			final File file = new File(fileName);
 			envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()));
-			if (!envelopTmp.exists()) {
-				envelopTmp.createNewFile();
-			}
-			else {
-				LOG.warn("Temp file already exists, please check");
+			if (!envelopTmp.exists() && !envelopTmp.createNewFile()) {
+				LOG.warn("Temp file already exists or cannot be created, please check");
 				envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()) + random.nextInt());
 			}
 			envelopTmp.deleteOnExit();

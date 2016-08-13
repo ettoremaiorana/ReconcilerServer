@@ -15,4 +15,8 @@ public class StrategiesCaptureTask implements Runnable {
 		strategiesTracker.add(algoId);
 	}
 
+	@Override
+	public String toString() {
+		return "StrategiesCaptureTask [strategiesTracker=" + strategiesTracker + ", algoId=" + algoId + "]";
+	}
 }
