@@ -18,7 +18,7 @@ public class TradeTaskFactory {
 	private static final File closed_trades_file = new File(CLOSED_TRADES_FILE_NAME);
 	private static final File open_trades_file = new File(OPEN_TRADES_FILE_NAME);
 	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
-//	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
+	//	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
 
 	public TradeTaskFactory(ApplicationInterface application) {
 	}
@@ -36,27 +36,42 @@ public class TradeTaskFactory {
 
 	public SingleTradeTask newSingleTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId) {
 		LOG.info("TransId " + transId + " -> single");
-		return new SingleTradeTask(new Runnable() {
-			@Override
-			public void run() {
-				final String[] trades = tradesInMessage.split("\\|");
-				try(final FileOutputStream pw = new FileOutputStream(closed_trades_file, true);) {
-					for (int i = 0; i < trades.length-1; i++) {
-						if (!trades[i].trim().equals("")) {
-							pw.write(trades[i].getBytes(CHARSET));
-						}
-						pw.write(",\n".getBytes(CHARSET));
+		return new SingleTradeTask(new SinglePartTransaction(tradesInMessage, listener, transId));
+	}
+
+	private static class SinglePartTransaction implements Runnable {
+		private final String tradesInMessage;
+		private final TransactionPhaseListener listener;
+		private final int transId;
+
+		public SinglePartTransaction(String tradesInMessage, TransactionPhaseListener listener, int transId) {
+			super();
+			this.tradesInMessage = tradesInMessage;
+			this.listener = listener;
+			this.transId = transId;
+		}
+
+		@Override
+		public void run() {
+			final String[] trades = tradesInMessage.split("\\|");
+			try(final FileOutputStream pw = new FileOutputStream(closed_trades_file, true);) {
+				for (int i = 0; i < trades.length-1; i++) {
+					if (!trades[i].trim().equals("")) {
+						pw.write(trades[i].getBytes(CHARSET));
 					}
-					pw.write(trades[trades.length - 1].getBytes(CHARSET));
-					pw.flush();
-				} catch (IOException e) {
-					throw new RuntimeException("Unable to append new trade", e);
-				} finally {
-					listener.onTaskEnd();
-					listener.onTransactionEnd(transId);
+					pw.write(",\n".getBytes(CHARSET));
 				}
+				pw.write(trades[trades.length - 1].getBytes(CHARSET));
+				pw.flush();
+			} catch (IOException e) {
+				throw new RuntimeException("Unable to append new trade", e);
+			} finally {
+				listener.onTaskEnd();
+				listener.onTransactionEnd(transId);
 			}
-		});
+		}
+
+
 	}
 
 	private static class MultiPartsTransaction implements Runnable {
@@ -73,6 +88,14 @@ public class TradeTaskFactory {
 			this.transId = transId;
 			this.first = first;
 		}
+
+
+		@Override
+		public String toString() {
+			return "MultiPartsTransaction [file=" + file + ", first=" + first + ", transId=" + transId + ", listener="
+					+ listener + ", tradesInMessage=" + tradesInMessage + "]";
+		}
+
 
 		@Override
 		public void run() {

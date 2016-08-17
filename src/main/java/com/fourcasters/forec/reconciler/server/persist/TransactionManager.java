@@ -94,7 +94,16 @@ public class TransactionManager implements TransactionPhaseListener {
 				}
 				it.remove();
 			}
-			LOG.info("transaction.size.after? " + transactions.size());
+			int size = transactions.size();
+			LOG.info("transaction.size.after? " + size);
+			if (size > 0) {
+				final Iterator<Entry<Integer, Transaction>> localIt = transactions.entrySet().iterator();
+				Entry<Integer, Transaction> e;
+				if ((e = localIt.next()) != null) {
+					LOG.info("Pending transaction id " + e.getKey() + " = " + e.getValue());
+				}
+			}
+			
 		}
 	};
 

@@ -101,8 +101,11 @@ public class ReconcilerBroker {
 
 	private static void selectorTaskProcessing() {
 		SelectorTask task;
-		while ((task = application.selectorTasks().poll()) != null) {
+		final int size = application.selectorTasks().size();
+		int inc = 0;
+		while ((task = application.selectorTasks().poll()) != null && inc < size) {
 			task.run();
+			inc++; //this is to avoid task to enqueue itself, so ending in an infinite loop.
 		}
 	}
 
