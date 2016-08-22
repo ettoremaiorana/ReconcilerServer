@@ -78,6 +78,7 @@ public class TransactionManager implements TransactionPhaseListener {
 
 			//TODO avoid iterator allocation using toArray(E[])
 			final Iterator<Entry<Integer, Transaction>> it = transactions.entrySet().iterator();
+			boolean toEnqueueAgain = false;
 			while (it.hasNext()) {
 				Entry<Integer, Transaction> e = it.next();
 				if (!e.getValue().completed) {
@@ -88,11 +89,18 @@ public class TransactionManager implements TransactionPhaseListener {
 						application.futureTasks().add(future);
 					}
 					else {
-						application.selectorTasks().add(this);
+						t.waiting -= 1;
+						if (t.waiting == 0) {
+							LOG.warn("Expired transaction: " + t);
+							it.remove();
+						}
+						toEnqueueAgain = true;
 					}
 					break;
+				} 
+				else {
+					it.remove();
 				}
-				it.remove();
 			}
 			int size = transactions.size();
 			LOG.info("transaction.size.after? " + size);
@@ -103,7 +111,9 @@ public class TransactionManager implements TransactionPhaseListener {
 					LOG.info("Pending transaction id " + e.getKey() + " = " + e.getValue());
 				}
 			}
-			
+			if (toEnqueueAgain) {
+				application.selectorTasks().add(this);
+			}
 		}
 	};
 
@@ -126,11 +136,13 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	static class Transaction {
 
+		private int waiting;
 		private final Deque<Runnable> tasks;
 		private boolean completed;
 
 		private Transaction(Deque<Runnable> tasks) {
-			completed = false;
+			this.waiting = 10;
+			this.completed = false;
 			this.tasks = tasks;
 		}
 
@@ -146,11 +158,16 @@ public class TransactionManager implements TransactionPhaseListener {
 		void complete() {
 			completed = true;
 		}
+
+		@Override
+		public String toString() {
+			return "Transaction [waiting=" + waiting + ", tasks=" + tasks + ", completed=" + completed + "]";
+		}
+		
 	}
 
 	@Override
 	public void onTransactionStart(int transId) {
-
 	}
 
 	@Override
