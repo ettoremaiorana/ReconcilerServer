@@ -137,6 +137,11 @@ public class TradeTaskFactory {
 		public void run() {
 			r.run();
 		}
+		@Override
+		public String toString() {
+			return "OpenTradeTask [r=" + r + "]";
+		}
+		
 	}
 
 	static class SingleTradeTask implements Runnable {
@@ -148,6 +153,11 @@ public class TradeTaskFactory {
 		public void run() {
 			r.run();
 		}
+		@Override
+		public String toString() {
+			return "SingleTradeTask [r=" + r + "]";
+		}
+		
 	}
 
 	static class FullTask implements Runnable {
@@ -160,6 +170,12 @@ public class TradeTaskFactory {
 		public void run() {
 			r.run();
 		}
+
+		@Override
+		public String toString() {
+			return "FullTask [r=" + r + "]";
+		}
+		
 	}
 
 }

@@ -178,7 +178,7 @@ public class TransactionManager implements TransactionPhaseListener {
 			public void run() {
 				LOG.info("transaction.size.before? " + transactions.size());
 
-				final Transaction t = transactions.get(transId);
+				final Transaction t = transactions.remove(transId);
 				if (t != null) {
 
 					t.completed = true;

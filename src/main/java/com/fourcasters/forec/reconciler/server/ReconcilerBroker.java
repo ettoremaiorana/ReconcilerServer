@@ -176,17 +176,22 @@ public class ReconcilerBroker {
 
 	private static void zmqEventHandling(final Socket... sockets) throws UnsupportedEncodingException {
 		for (Socket socket : sockets) {
-			int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
-			if (recvTopicSize > 0) {
-				read(socket);
-
-				LOG.info("topic = " + topicName);
-				LOG.info("data  = " + data);
-				final MessageHandler handler = handlers.get(topicName);
-				handler.enqueue(topicName, data);
-
-				TOPIC_BUFFER.clear();
-				DATA_BUFFER.clear();
+			try {
+				int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
+				if (recvTopicSize > 0) {
+					read(socket);
+					
+					LOG.info("topic = " + topicName);
+					LOG.info("data  = " + data);
+					final MessageHandler handler = handlers.get(topicName);
+					handler.enqueue(topicName, data);
+					
+					TOPIC_BUFFER.clear();
+					DATA_BUFFER.clear();
+				}
+			}
+			catch (Exception e) {
+				LOG.error("zmq message event handling failed: ", e);
 			}
 		}
 
