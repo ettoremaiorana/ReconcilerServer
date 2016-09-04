@@ -100,6 +100,7 @@ public class TransactionManager implements TransactionPhaseListener {
 				} 
 				else {
 					it.remove();
+					toEnqueueAgain = true;
 				}
 			}
 			int size = transactions.size();
