@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
-import com.fourcasters.forec.reconciler.server.cli.PerformanceCalc.PerformanceCalcTask;
+import com.fourcasters.forec.reconciler.server.PerformanceCalc.PerformanceCalcTask;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TradeEventCapturerTest {

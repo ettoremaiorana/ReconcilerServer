@@ -1,57 +1,38 @@
 package com.fourcasters.forec.reconciler.server;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CLOSED_TRADES_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.MT4_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NEW_TRADES_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_HEADER;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.OPEN_TRADES_FILE_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.PERFORMANCE_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RECONCILER_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_FILE_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.WRONG_METHOD_HEADER;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
-
 public class ReconcilerBroker {
 
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
-
-
-	private static final Random random = new Random(System.currentTimeMillis());
-
 
 	private static final int bufferSize = 10240*5;
 	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
@@ -61,10 +42,7 @@ public class ReconcilerBroker {
 	private static boolean running;
 	private static String topicName;
 	private static String data;
-	private static MessageHandlerFactory handlers; 
 	private static SelectionKey key;
-	private static ReconcilerMessageSender reconcMessageSender;
-	private static StrategiesTracker stratgiesTracker;
 	
 
 	public static void main(String[] args) throws IOException {
@@ -76,17 +54,18 @@ public class ReconcilerBroker {
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
 		LOG.info("Zmq  server listening on port 51125");
 
-		reconcMessageSender = new ReconcilerMessageSender(application);
-		stratgiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
-		handlers = new MessageHandlerFactory(application, reconcMessageSender, stratgiesTracker);
+		final ReconcilerMessageSender reconcMessageSender = new ReconcilerMessageSender(application);
+		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
+		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker);
+		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
 
-		application.executor().scheduleAtFixedRate(command, 300L, 300L, TimeUnit.SECONDS);
+		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;
 		while (running) {
-			zmqEventHandling(server, newTradesListener);
+			zmqEventHandling(zmqMsgsHandlers, server, newTradesListener);
 
-			httpEventHandling(s, httpServer);
+			httpEventHandling(s, httpServer, httpReqHandler);
 
 			tasksProcessing();
 			selectorTaskProcessing();
@@ -128,7 +107,7 @@ public class ReconcilerBroker {
 		return true;
 	}
 
-	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer) throws IOException {
+	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer, HttpRequestHandler httpReqHandler) throws IOException {
 		if (s.selectNow() > 0) {
 			final Future<?> f = application.executor().submit(new Runnable() {
 
@@ -151,8 +130,7 @@ public class ReconcilerBroker {
 								client.setSoTimeout(3000);
 								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream(), CHARSET));
 								final HttpParser httpParser = new HttpParser(httpReader);
-								int response = respond(clientChannel, httpParser);
-								LOG.info(response);
+								httpReqHandler.respond(clientChannel, httpParser);
 							}
 						}
 					} catch (IOException e) {
@@ -174,7 +152,7 @@ public class ReconcilerBroker {
 
 
 
-	private static void zmqEventHandling(final Socket... sockets) throws UnsupportedEncodingException {
+	private static void zmqEventHandling(MessageHandlerFactory handlersFactory, final Socket... sockets) throws UnsupportedEncodingException {
 		for (Socket socket : sockets) {
 			try {
 				int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
@@ -183,7 +161,7 @@ public class ReconcilerBroker {
 					
 					LOG.info("topic = " + topicName);
 					LOG.info("data  = " + data);
-					final MessageHandler handler = handlers.get(topicName);
+					final MessageHandler handler = handlersFactory.get(topicName);
 					handler.enqueue(topicName, data);
 					
 					TOPIC_BUFFER.clear();
@@ -244,101 +222,6 @@ public class ReconcilerBroker {
 	}
 
 
-	private static int respond(final SocketChannel clientChannel, final HttpParser httpParser) throws IOException {
-		int response = httpParser.parseRequest();
-		if (response == 200){
-			if (httpParser.getRequestURL().equals("/strategies")) {
-				LOG.info("Set of strategies requested");
-				sendString(clientChannel, Arrays.toString(stratgiesTracker.getStrategies()));
-			}
-			else if (httpParser.getRequestURL().equals("/history/csv")) {
-				LOG.info("Trades history requested in csv format");
-				sendFile(clientChannel, RESPONSE_OK_HEADER, CLOSED_TRADES_FILE_NAME);
-			}
-			else if(httpParser.getRequestURL().equals("/open/csv")){
-				LOG.info("Open trades requested in csv format");
-				sendFile(clientChannel, RESPONSE_OK_HEADER, OPEN_TRADES_FILE_NAME);
-			}
-			else if (httpParser.getRequestURL().equals("/performance")) {
-				LOG.info("Performace file requested");
-				if(!httpParser.getMethod().equals("GET")) {
-					response = 405;
-					LOG.error("Method must be GET");
-					sendFile(clientChannel, WRONG_METHOD_HEADER, WRONG_METHOD_FILE_NAME);
-				}
-				else {
-					final String magicAsString = httpParser.getParam("magic");
-					if (magicAsString == null) {
-						response = 404;
-						LOG.error("Magic must be a paremeter");
-						sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
-					}
-					else {
-						final String fileName = magicAsString + PERFORMANCE_FILE_NAME;
-						if (!Files.exists(Paths.get(fileName))) {
-							response = 404;
-							LOG.error("Magic " + magicAsString +" is not a number");
-							sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
-						}
-						else {
-							sendFile(clientChannel, RESPONSE_OK_HEADER, fileName);
-						}
-					}
-				}
-			}
-		}
-		return response;
-	}
-
-
-
-	private static void sendString(SocketChannel clientChannel, String response) throws IOException {
-		clientChannel.write(ByteBuffer.wrap(response.getBytes(CHARSET)));
-		clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
-	}
-
-	private static void sendFile(final SocketChannel clientChannel, byte[] header, String fileName) throws IOException {
-		FileChannel tmpChannel = null;
-		FileChannel readChannel = null;
-		File envelopTmp = null;
-		try {
-			final File file = new File(fileName);
-			envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()));
-			if (!envelopTmp.exists() && !envelopTmp.createNewFile()) {
-				LOG.warn("Temp file already exists or cannot be created, please check");
-				envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()) + random.nextInt());
-			}
-			envelopTmp.deleteOnExit();
-			tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
-			readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
-			tmpChannel.write(ByteBuffer.wrap(header));
-			long position = 0;
-			do {
-				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*8, tmpChannel);
-				position += transfered;
-			} while(position < file.length());
-			tmpChannel.force(true);
-			position = 0;
-			do {
-				long transfered = readChannel.transferTo(position, position + 256*8, clientChannel);
-				position += transfered;
-				LOG.debug("Sending...");
-			} while(position < envelopTmp.length());
-			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
-
-		}
-		finally {
-			if(tmpChannel != null) tmpChannel.close();
-			if(readChannel != null) readChannel.close();
-			if(envelopTmp != null) {
-				if(!envelopTmp.delete()) {
-					LOG.warn("Unable to delete temporary file {}", envelopTmp.getAbsoluteFile());
-				}
-
-			}
-		}
-	}
-
 	private static int read(final Socket server) throws UnsupportedEncodingException {
 		TOPIC_BUFFER.flip();
 		TOPIC_BUFFER.get(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit()); //read only the bits just read
@@ -353,13 +236,13 @@ public class ReconcilerBroker {
 		return recvDataSize;
 	}
 
-	private static final Runnable command = new Runnable() {
+	private static final Consumer<ReconcilerMessageSender> consumer = new Consumer<ReconcilerMessageSender>() {
 
 		@Override
-		public void run() {
+		public void accept(ReconcilerMessageSender t) {
 			LOG.info("New scheduled task, asking for open trades");
 			final Future<?> f = application.executor().submit(
-					() -> reconcMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
+					() -> t.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
 					);
 			application.selectorTasks().add(new SelectorTask() {
 				@Override

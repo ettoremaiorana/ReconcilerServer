@@ -9,7 +9,7 @@ import org.apache.commons.mail.SimpleEmail;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fourcasters.forec.reconciler.server.cli.PerformanceCalc.PerformanceCalcTask;;
+import com.fourcasters.forec.reconciler.server.PerformanceCalc.PerformanceCalcTask;;
 
 public class TradeEventCapturer implements MessageHandler {
 

@@ -1,13 +1,10 @@
-package com.fourcasters.forec.reconciler.server.cli;
+package com.fourcasters.forec.reconciler.server;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.fourcasters.forec.reconciler.server.ApplicationInterface;
-import com.fourcasters.forec.reconciler.server.SelectorTask;
 
 public class PerformanceCalc {
 
