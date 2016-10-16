@@ -1,4 +1,5 @@
 package com.fourcasters.forec.reconciler.server;
+import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
@@ -58,7 +59,8 @@ public class ReconcilerBroker {
 		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
-
+                final HistoryDAO dao = new HistoryDAO();
+                dao.dbhash("EURUSD.csv");
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;
