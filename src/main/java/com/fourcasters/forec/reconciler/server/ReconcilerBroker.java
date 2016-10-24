@@ -61,7 +61,7 @@ public class ReconcilerBroker {
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
 		final HistoryDAO dao = new HistoryDAO();
-		dao.dbhash("EURUSD.csv");
+//		dao.dbhash("EURUSD.csv");
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;

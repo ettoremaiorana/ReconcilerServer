@@ -7,15 +7,24 @@ package com.fourcasters.forec.reconciler.query.history;
 
 import java.nio.charset.StandardCharsets;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  *
  * @author ettoremaiorana
  */
 public class HistoryDAO {
 
+	private static final Logger LOG = LogManager.getLogger(HistoryDAO.class);
     static {
-        System.loadLibrary("historydb");
-        init();
+    	try {
+    		System.loadLibrary("historydb");
+    		init();
+    	}
+    	catch (UnsatisfiedLinkError e) {
+    		LOG.warn("History service is unavailable on this instance");
+    	}
     }
     public boolean dbhash(String pathToFile) {
         return dbhash(pathToFile.getBytes(StandardCharsets.US_ASCII));
