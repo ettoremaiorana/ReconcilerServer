@@ -1,5 +1,4 @@
 package com.fourcasters.forec.reconciler.server;
-import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
@@ -30,6 +29,8 @@ import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
+
+import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
 public class ReconcilerBroker {
 
 	private static final Application application = new Application();
@@ -44,7 +45,7 @@ public class ReconcilerBroker {
 	private static String topicName;
 	private static String data;
 	private static SelectionKey key;
-	
+
 
 	public static void main(String[] args) throws IOException {
 		final Context ctx = application.context();
@@ -59,8 +60,8 @@ public class ReconcilerBroker {
 		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
-                final HistoryDAO dao = new HistoryDAO();
-                dao.dbhash("EURUSD.csv");
+		final HistoryDAO dao = new HistoryDAO();
+		dao.dbhash("EURUSD.csv");
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;
@@ -160,12 +161,12 @@ public class ReconcilerBroker {
 				int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
 				if (recvTopicSize > 0) {
 					read(socket);
-					
+
 					LOG.info("topic = " + topicName);
 					LOG.info("data  = " + data);
 					final MessageHandler handler = handlersFactory.get(topicName);
 					handler.enqueue(topicName, data);
-					
+
 					TOPIC_BUFFER.clear();
 					DATA_BUFFER.clear();
 				}

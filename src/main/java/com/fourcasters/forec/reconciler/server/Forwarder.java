@@ -6,16 +6,20 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
-public class Forwarder implements MessageHandler {
-	private final Context ctx;
+public class Forwarder implements MessageHandler, AutoCloseable {
+
+    public static Forwarder create(ApplicationInterface application) {
+        final Context ctx = application.context();
+        final Socket socket = ctx.socket(ZMQ.PUB);
+	socket.bind("tcp://*:51127");
+        return new Forwarder(application, socket);
+    }
 	private final Socket socket;
 	private final ApplicationInterface application;
 
-	public Forwarder(ApplicationInterface application) {
+	private Forwarder(ApplicationInterface application, Socket socket) {
 		this.application = application;
-		this.ctx = application.context();
-		this.socket = ctx.socket(ZMQ.PUB);
-		socket.bind("tcp://*:51127");
+		this.socket = socket;
 	}
 
 	@Override
@@ -30,5 +34,12 @@ public class Forwarder implements MessageHandler {
 		});
 		application.futureTasks().offer(f);
 	}
+
+    @Override
+    public void close() throws Exception {
+        if (socket != null) {
+            socket.close();
+        }
+    }
 
 }

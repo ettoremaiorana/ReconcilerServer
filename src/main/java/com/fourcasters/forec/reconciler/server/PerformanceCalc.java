@@ -14,6 +14,8 @@ public class PerformanceCalc {
 		private static final Logger LOG = LogManager.getLogger(PerformanceCalc.class);
 		private static final boolean exeExist = new File("performancecalc.exe").exists();
 		private static final boolean isWindows = System.getProperty("os.name").contains("Windows");
+		private static final int MAX_BACKOFF_TIME = Integer.getInteger("performance.calc.backoff.max", 3200);
+		
 		private Process proc;
 		private final ProcessBuilder pb;
 		private final ApplicationInterface application;

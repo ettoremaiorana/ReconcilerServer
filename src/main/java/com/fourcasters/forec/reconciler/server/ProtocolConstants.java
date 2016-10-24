@@ -1,9 +1,10 @@
 package com.fourcasters.forec.reconciler.server;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class ProtocolConstants {
-	public static final Charset CHARSET = Charset.forName("US-ASCII");
+	public static final Charset CHARSET = StandardCharsets.US_ASCII;
 
 	public static final String CLOSED_TRADES_FILE_NAME = "Trades.csv";
 	public static final String OPEN_TRADES_FILE_NAME = "Opens.csv";

@@ -13,8 +13,8 @@ public class ReconcilierREPL {
 	public static void main(String[] args) throws IOException {
 		final Context ctx = ZMQ.context(1);
 		final Socket socket = ctx.socket(ZMQ.PUB);
-//		socket.connect("tcp://52.88.34.166:51125");
-		socket.connect("tcp://52.33.13.29:51125");
+		socket.connect("tcp://52.88.34.166:51125");
+//		socket.connect("tcp://52.33.13.29:51125");
 //		socket.connect("tcp://localhost:51125");
 		
 		//socket.connect("tcp://52.33.13.29:50026");
