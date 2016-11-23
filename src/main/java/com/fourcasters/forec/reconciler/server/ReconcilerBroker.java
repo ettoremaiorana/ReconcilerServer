@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
@@ -31,6 +32,8 @@ import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
+import com.fourcasters.forec.reconciler.server.http.HttpParser;
+import com.fourcasters.forec.reconciler.server.http.HttpRequestHandler;
 public class ReconcilerBroker {
 
 	private static final Application application = new Application();
@@ -41,30 +44,47 @@ public class ReconcilerBroker {
 	private static final byte[] DATA_IN_INPUT = new byte[bufferSize];
 	private static final ByteBuffer TOPIC_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
 	private static final ByteBuffer DATA_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
-	private static boolean running;
+	private static volatile boolean running;
 	private static String topicName;
 	private static String data;
 	private static SelectionKey key;
+	private static Thread t;
 
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws InterruptedException {
+		t = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					new ReconcilerBroker().run();
+				} catch (IOException | URISyntaxException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}, "Event-loop-thread");
+		t.setDaemon(true);
+		t.start();
+		t.join();
+	}
+
+	final void run() throws IOException, UnsupportedEncodingException, URISyntaxException {
 		final Context ctx = application.context();
 		final Socket server = zmqSetup(ctx);
 		final Socket newTradesListener = zmqSetupListener(ctx);
 		final Selector s = Selector.open();
 		final ServerSocketChannel httpServer = httpServerSetup(s);
-		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
-		LOG.info("Zmq  server listening on port 51125");
 
 		final ReconcilerMessageSender reconcMessageSender = new ReconcilerMessageSender(application);
 		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
-		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker);
-		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
 		final HistoryDAO dao = new HistoryDAO();
-//		dao.dbhash("EURUSD.csv");
+		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
+		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
+//		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;
+		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
+		LOG.info("Zmq  server listening on port 51125");
 		while (running) {
 			zmqEventHandling(zmqMsgsHandlers, server, newTradesListener);
 
@@ -255,4 +275,13 @@ public class ReconcilerBroker {
 			});
 		}
 	};
+
+
+	void stop() {
+		running = false;
+	}
+
+	boolean isStopped() {
+		return !t.isAlive();
+	}
 }

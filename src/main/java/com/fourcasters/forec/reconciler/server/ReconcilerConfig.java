@@ -11,7 +11,8 @@ public class ReconcilerConfig {
 	private enum ENV {
 		prod,
 		demo,
-		dev
+		dev,
+		test
 	}
 
 	public static final String BKT_DATA_PATH;
@@ -21,9 +22,12 @@ public class ReconcilerConfig {
 			Properties p = new Properties();
 			p.load(new FileInputStream(new File("config.properties")));
 			
-			String envAsProperty = System.getenv("ENV");
+			String envAsProperty = System.getProperty("ENV");
 			if (envAsProperty == null) {
-				throw new IllegalStateException("The system property ENV is not set");
+				envAsProperty = System.getenv("ENV");
+				if (envAsProperty == null) {
+					throw new IllegalStateException("The system property ENV is not set");
+				}
 			}
 			ENV env = ENV.valueOf(envAsProperty );
 			if (env == null) {
