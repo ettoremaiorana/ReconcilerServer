@@ -79,7 +79,7 @@ public class ReconcilerBroker {
 		final HistoryDAO dao = new HistoryDAO();
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
-//		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;
