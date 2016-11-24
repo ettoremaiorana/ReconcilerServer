@@ -93,7 +93,7 @@ abstract class AbstractServlet {
 			clientChannel.write(ByteBuffer.wrap(header));
 			do {
 				int remaining = (int)(end-position);
-				int length = Math.min(256*8, remaining);
+				int length = Math.min(1024*1024, remaining);
 				long transfered = readChannel.transferTo(position, length, clientChannel);
 				position += transfered;
 				LOG.debug("Sending...");
