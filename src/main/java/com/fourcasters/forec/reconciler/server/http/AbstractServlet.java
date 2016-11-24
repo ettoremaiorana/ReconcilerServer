@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Random;
 
@@ -21,8 +22,8 @@ import com.fourcasters.forec.reconciler.server.ReconcilerBroker;
 
 abstract class AbstractServlet {
 
-	abstract boolean validate();
-	abstract void respond(SocketChannel clientChannel) throws IOException;
+	abstract boolean validate(SocketChannel clientChannel) throws IOException;
+	abstract long respond(SocketChannel clientChannel) throws IOException;
 
 	final HttpParser httpParser;
 	private static final Logger LOG = LogManager.getLogger(AbstractServlet.class);
@@ -84,32 +85,16 @@ abstract class AbstractServlet {
 		}
 	}
 
-	static void sendFile(final SocketChannel clientChannel, byte[] header, String fileName, long start, long end) throws IOException {
-		FileChannel tmpChannel = null;
+	static long sendFile(final SocketChannel clientChannel, byte[] header, Path filePath, long start, long end) throws IOException {
 		FileChannel readChannel = null;
-		File envelopTmp = null;
+		long position = start;
 		try {
-			final File file = new File(fileName);
-			envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()));
-			if (!envelopTmp.exists() && !envelopTmp.createNewFile()) {
-				LOG.warn("Temp file already exists or cannot be created, please check");
-				envelopTmp = new File(String.valueOf(ReconcilerBroker.class.hashCode()) + random.nextInt());
-			}
-			envelopTmp.deleteOnExit();
-			tmpChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.WRITE);
-			readChannel = FileChannel.open(envelopTmp.toPath(), StandardOpenOption.READ);
-			tmpChannel.write(ByteBuffer.wrap(header));
-			long position = 0;
-			do {
-				long transfered =  FileChannel.open(file.toPath(), StandardOpenOption.READ).transferTo(position, position + 256*8, tmpChannel);
-				position += transfered;
-			} while(position < file.length());
-			tmpChannel.force(true);
-			position = start;
+			readChannel = FileChannel.open(filePath, StandardOpenOption.READ);
+			clientChannel.write(ByteBuffer.wrap(header));
 			do {
 				int remaining = (int)(end-position);
 				int length = Math.min(256*8, remaining);
-				long transfered = readChannel.transferTo(position, position + length, clientChannel);
+				long transfered = readChannel.transferTo(position, length, clientChannel);
 				position += transfered;
 				LOG.debug("Sending...");
 			} while(position < end);
@@ -117,15 +102,9 @@ abstract class AbstractServlet {
 
 		}
 		finally {
-			if(tmpChannel != null) tmpChannel.close();
 			if(readChannel != null) readChannel.close();
-			if(envelopTmp != null) {
-				if(!envelopTmp.delete()) {
-					LOG.warn("Unable to delete temporary file {}", envelopTmp.getAbsoluteFile());
-				}
-
-			}
 		}
+		return position - start;
 	}
 
 	boolean validateMethod(HttpParser httpParser, SocketChannel clientChannel, String param, String errorMessage) throws IOException {

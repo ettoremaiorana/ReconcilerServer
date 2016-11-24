@@ -25,48 +25,49 @@ public class HistoryServlet extends AbstractServlet {
 	private static final Logger LOG = LogManager.getLogger(HistoryServlet.class);
 	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
 	private final HistoryDAO historyDao;
-	
+
 	HistoryServlet(HttpParser httpParser, HistoryDAO dao) {
 		super(httpParser);
 		this.historyDao = dao;
 	}
 
 	@Override
-	void respond(SocketChannel clientChannel) throws IOException {
-		if (validateMethod(httpParser, clientChannel, "GET", "Method must be GET")
-				&& validateParameter(httpParser, clientChannel, "cross", "Parameter 'cross' not well formatted")
-				&& validateParameter(httpParser, clientChannel, "from", "Parameter 'from' not well formatted")
-				&& validateParameter(httpParser, clientChannel, "to", "Parameter 'to' not well formatted")) {
+	long respond(SocketChannel clientChannel) throws IOException {
+		if (validate(clientChannel)) {
 
 			final String cross = httpParser.getParam("cross").toLowerCase();
-			final String fileName = cross + BKT_DATA_EXTENSION;
-			final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, fileName);
+			final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + BKT_DATA_EXTENSION);
 			LOG.debug("Path to history: " + path);
 			if (!Files.exists(path)) {
 				LOG.error("Cross " + cross +" has not been found");
 				sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+				return -1;
 			}
-			else {
-				try {
-					Date from = sdf.parse(httpParser.getParam("from"));
-					Date to = sdf.parse(httpParser.getParam("to"));
-					LOG.debug("from: " + from);
-					LOG.debug("to: " + to);
-					long start = historyDao.offset(cross+BKT_DATA_EXTENSION, from, false);
-					long end = historyDao.offset(cross+BKT_DATA_EXTENSION, to, true);
-					sendFile(clientChannel, RESPONSE_OK_HEADER, path.toString(), start, end);
-				}
-				catch (ParseException e){
-					LOG.error(e.getMessage());
-					sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
-				}
+			long transfered = -1;
+			try {
+				Date from = sdf.parse(httpParser.getParam("from"));
+				Date to = sdf.parse(httpParser.getParam("to"));
+				LOG.debug("from: " + from);
+				LOG.debug("to: " + to);
+				long start = historyDao.offset(cross, from, false);
+				long end = historyDao.offset(cross, to, true);
+				transfered = sendFile(clientChannel, RESPONSE_OK_HEADER, path, start, end);
 			}
-		}		
+			catch (ParseException e){
+				LOG.error(e.getMessage());
+				sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+			}
+			return transfered;
+		}
+		return -1;
 	}
 
 	@Override
-	public boolean validate() {
-		return false;
+	public boolean validate(SocketChannel clientChannel) throws IOException {
+		return validateMethod(httpParser, clientChannel, "GET", "Method must be GET")
+				&& validateParameter(httpParser, clientChannel, "cross", "Parameter 'cross' not well formatted")
+				&& validateParameter(httpParser, clientChannel, "from", "Parameter 'from' not well formatted")
+				&& validateParameter(httpParser, clientChannel, "to", "Parameter 'to' not well formatted");
 	}
 
 }
