@@ -53,6 +53,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		final Transaction t = new Transaction(tasks);
 		transactions.put(transId, t);
 		onTaskStart();
+		LOG.info("tasksToRun? " + tasksToRun);
 	}
 
 
@@ -84,7 +85,9 @@ public class TransactionManager implements TransactionPhaseListener {
 				if (!e.getValue().completed) {
 					final Transaction t = e.getValue();
 					final Runnable task = t.nextTask();
+					LOG.info("First transaction in the queue: " + t);
 					if (task != null) {
+						LOG.info("Next task: " + task);
 						final Future<?> future = application.executor().submit(task);
 						application.futureTasks().add(future);
 					}
@@ -188,6 +191,8 @@ public class TransactionManager implements TransactionPhaseListener {
 				else {
 					LOG.info("TransId " + transId + " -> NULL ");	
 				}
+				LOG.info("transaction.size.after? " + transactions.size());
+
 			}
 		});
 	}

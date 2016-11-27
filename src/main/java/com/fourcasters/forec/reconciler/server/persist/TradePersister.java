@@ -17,7 +17,8 @@ public class TradePersister implements MessageHandler {
 		final int transIdIndex = message.indexOf("=");
 		final Integer transId = Integer.parseInt(message.substring(0, transIdIndex));
 		final int transModeIndex = message.indexOf("=", transIdIndex+1);
-		final TransactionMode mode = TransactionMode.valueOf(message.substring(transIdIndex+1, transModeIndex));
+		final String transactionModeAsString = message.substring(transIdIndex+1, transModeIndex);
+		final TransactionMode mode = TransactionMode.valueOf(transactionModeAsString);
 		final String tradesInMessage = message.substring(transModeIndex + 1);
 
 		if (mode == TransactionMode.SINGLE) {

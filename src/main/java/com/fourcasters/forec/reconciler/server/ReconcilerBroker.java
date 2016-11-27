@@ -18,6 +18,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -68,6 +69,9 @@ public class ReconcilerBroker {
 	}
 
 	final void run() throws IOException, UnsupportedEncodingException, URISyntaxException {
+		if ("stop".equals(System.getProperty("debug"))) {
+			new BufferedReader(new InputStreamReader(System.in)).readLine();
+		}
 		final Context ctx = application.context();
 		final Socket server = zmqSetup(ctx);
 		final Socket newTradesListener = zmqSetupListener(ctx);
@@ -87,7 +91,6 @@ public class ReconcilerBroker {
 		LOG.info("Zmq  server listening on port 51125");
 		while (running) {
 			zmqEventHandling(zmqMsgsHandlers, server, newTradesListener);
-
 			httpEventHandling(s, httpServer, httpReqHandler);
 
 			tasksProcessing();
@@ -112,8 +115,9 @@ public class ReconcilerBroker {
 	}
 
 	private static void tasksProcessing() {
-		if (application.futureTasks().size() > 0) {
-			application.futureTasks().removeIf(
+		Deque<Future<?>> tasks = application.futureTasks();
+		if (tasks.size() > 0) {
+			tasks.removeIf(
 					f -> {
 						return f.isDone() && logIfException(f);
 					});

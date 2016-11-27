@@ -26,7 +26,7 @@ public class HistoryRecordInputStream {
 			return Short.parseShort(token);
 		}
 		catch(NumberFormatException e) {
-			throw new HistoryRecordParsingException("the token could not be parsed into a double", e);
+			throw new HistoryRecordParsingException("the token could not be parsed into a short", e);
 		}
 	}
 

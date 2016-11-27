@@ -5,20 +5,12 @@
  */
 package com.fourcasters.forec.reconciler.query.history;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,16 +48,35 @@ public class HistoryDAO {
 		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, pathToFile + ProtocolConstants.BKT_DATA_EXTENSION);
 		RandomAccessFile sc = new RandomAccessFile(path.toFile(), "r");
 		String recordAsString;
-		HistoryRecord prev = null;
 		HistoryRecordBuilder recordBuilder = new HistoryRecordBuilder(recordFormat);
 
-		while((recordAsString = sc.readLine()) != null) {
-			HistoryRecord curr = recordBuilder.newRecord(recordAsString);
-			if (!HistoryRecord.sameHour(curr, prev)) {
-				hash.put(curr.timestamp(), sc.getFilePointer() - recordAsString.length() - 2);
+		byte[] buff = new byte[4096];
+		boolean finished = false;
+		int rem = 0;
+		long totalBytes = 0;
+		HistoryRecord prev = null;
+		while (!finished) {
+			int bytesRead = sc.read(buff, rem, 4096);
+			ByteBuffer bb = ByteBuffer.wrap(buff);
+			while ((recordAsString = readLine(bb)) != null) {
+				HistoryRecord curr = recordBuilder.newRecord(recordAsString);
+				if (!HistoryRecord.sameHour(curr, prev)) {
+					hash.put(curr.timestamp(), totalBytes);
+				}
+				prev = curr;
+				totalBytes += (recordAsString.length() + 2); // /r/n
 			}
-			prev = curr;
+			rem = 0;
+			if (bb.remaining() > 0 ) {
+				rem = bb.remaining();
+			}
+			buff = new byte[4096+rem];
+			bb.get(buff, 0 , rem);
+			if (bytesRead < 4096) {
+				finished = true;
+			}
 		}
+		
 		sc.close();
 		LOG.info(pathToFile + " generated an index file of " + hash.size() + " entries");
 		return hash;
@@ -111,60 +122,53 @@ public class HistoryDAO {
 		return index.size();
 	}
 
-	public static void main(String[] args) throws ParseException, IOException {
-		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-		reader.readLine();
+	final String readLine(ByteBuffer bb) throws IOException {
+        StringBuffer input = new StringBuffer();
+        int c = -1;
+        boolean eol = false;
+        while (!eol) {
+        	if (!bb.hasRemaining()) {
+        		break;
+        	}
+            switch ((c = bb.get())) {
+            case -1:
+            case '\n':
+                eol = true;
+                break;
+            case '\r':
+            	if (bb.hasRemaining()) {
+            		eol = true;
+            		if ((bb.get()) != '\n') {
+            			throw new RuntimeException();
+            		}
+            		break;
+            	}
+            	input.append((char)c);
+            	break;
+            default:
+                input.append((char)c);
+                break;
+            }
+        }
+        if (!eol) {
+        	bb.position(bb.limit() - input.length());
+        	return null;
+        }
+        if ((c == -1) && (input.length() == 0)) {
+            return null;
+        }
+        return input.toString();
+    }
+
+	public static void main(String[] args) throws IOException {
+		System.setProperty("ENV", "test");
 		HistoryDAO dao = new HistoryDAO();
-		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
-		reader.readLine();
-		GregorianCalendar gc = new GregorianCalendar(2015, 12, 23, 13, 21, 00);
-		long offset = dao.offset("eurusd.csv", new Date(gc.getTimeInMillis()), false);
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
-		System.out.println(offset);
-		Date d = sdf.parse("201512231321");
-		offset = dao.offset("eurusd.csv", d, false);
-		System.out.println(offset);
-		
-		String fileName = "./history/dev/public/eurusd.csv";
-		long start = 31114608;
-		long end =   31316663;
-		System.out.println(new Date(1450875626997L));
-		System.out.println(new Date(1450648826997L));
-		RandomAccessFile raf = new RandomAccessFile(fileName, "r");
-		raf.seek(start);
-		String record = raf.readLine();
-		System.out.println(record);
-		raf.seek(end);
-		record = raf.readLine();
-		System.out.println(record);
+		TreeMap<Long, Long> map = dao.javaDbHash("eurusd",  "yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		RandomAccessFile raf = new RandomAccessFile("./history/test/eurusd.csv", "r");
+		for (Entry<Long, Long> entry : map.entrySet()) {
+			raf.seek(entry.getValue());
+			System.out.println(raf.readLine());
+		}
 		raf.close();
-
-		final File file = new File(fileName);
-		FileChannel readChannel = FileChannel.open(Paths.get(file.getAbsolutePath()), StandardOpenOption.READ);
-		FileChannel writeChannel = null;
-		ByteBuffer dst = ByteBuffer.allocateDirect(256*8);
-		long position = start;
-		do {
-			int remaining = (int)(end-position);
-			int length = Math.min(256*8, remaining);
-			position += read(readChannel, dst, position, length);
-			write(writeChannel, dst);
-		} while(position < end);
-		readChannel.close();
-	}
-
-	private static int read(FileChannel channel, ByteBuffer dst, long position, int length) throws IOException {
-		dst.position(0);
-		channel.position(position);
-		dst.limit(length);
-		int bytesRead = channel.read(dst);
-		return bytesRead;
-	}
-	private static void write(FileChannel writeChannel, ByteBuffer dst) {
-		dst.position(0);
-		byte[] arr = new byte[dst.remaining()];
-		dst.get(arr);
-		String ouput = new String(arr);
-		System.out.print(ouput);
 	}
 }

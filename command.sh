@@ -1,1 +1,1 @@
-java -XX:+UseConcMarkSweepGC  -XX:+PrintGCDetails -XX:+PrintGCTimeStamps  -Xloggc:gc.log -Dhttp.port=9091 -Dmail.password=&MAIL_PWD -Dlog.info=true -DENV=pred -jar reconciler.jar
+java -XX:+UnlockDiagnosticVMOptions -XX:+TraceClassLoading -XX:+LogCompilation -XX:LogFile=mylogfile.log -XX:+DebugNonSafepoints -XX:+PreserveFramePointer -XX:+UseConcMarkSweepGC  -XX:+PrintGCDetails -XX:+PrintGCTimeStamps  -Xloggc:gc.log -Dhttp.port=9091 -Dmail.password=$MAIL_PWD -Dlog.info=true -Ddebug=stop -DENV=dev -jar reconciler.jar

@@ -135,9 +135,5 @@ public class HistoryRecordBuilder {
 					+ ", high=" + high + ", low=" + low + "]";
 		}
 
-		public static void main(String[] args) {
-			System.out.println(new HistoryRecordBuilder("o,h,l,c,v dd/mm/yyyy HH:MM").
-					newRecord("1,2,3,4,5 17/11/2016 21:22"));
-		}
 	}
 }
