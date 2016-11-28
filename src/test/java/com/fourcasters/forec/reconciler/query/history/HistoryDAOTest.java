@@ -1,6 +1,8 @@
 package com.fourcasters.forec.reconciler.query.history;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -53,7 +55,7 @@ public class HistoryDAOTest {
 
 	@Test
 	public void testHashCount() throws IOException {
-		assertEquals(-1, dao.hashCount("audcad"));
+		assertEquals(-1, dao.hashCount("gbpjpy"));
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		HistoryRecordBuilder builder = new HistoryRecordBuilder("yyyy.mm.dd,HH:MM,o,h,l,c,v");
 		String record;
@@ -162,5 +164,12 @@ public class HistoryDAOTest {
 		assertEquals(10, counter);
 		assertEquals(first, "2015.12.21,00:10,10852,10857,10852,10856,27");
 		assertEquals(last,  "2015.12.21,00:19,10858,10858,10857,10857,27");
+	}
+	@Test
+	public void testHashAll() throws IOException {
+		dao.dbhashAll("yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		assertTrue(dao.hashCount("audcad") > 0);
+		assertTrue(dao.hashCount("eurusd") > 0);
+
 	}
 }

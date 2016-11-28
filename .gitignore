@@ -1,2 +1,9 @@
 /bin/
 /target/
+.attach_pid24146
+.classpath
+.project
+.settings/
+dependency-reduced-pom.xml
+gc.log
+mylogfile.log

@@ -70,6 +70,7 @@ public class ReconcilerBroker {
 
 	final void run() throws IOException, UnsupportedEncodingException, URISyntaxException {
 		if ("stop".equals(System.getProperty("debug"))) {
+			LOG.info("Write anything and then press enter to let the program start");
 			new BufferedReader(new InputStreamReader(System.in)).readLine();
 		}
 		final Context ctx = application.context();
@@ -83,7 +84,7 @@ public class ReconcilerBroker {
 		final HistoryDAO dao = new HistoryDAO();
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
-		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		dao.dbhashAll();
 		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
 
 		running = true;

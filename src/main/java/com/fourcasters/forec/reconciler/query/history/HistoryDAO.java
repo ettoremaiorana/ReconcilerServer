@@ -5,6 +5,7 @@
  */
 package com.fourcasters.forec.reconciler.query.history;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -31,15 +32,28 @@ public class HistoryDAO {
 
 	private static final Logger LOG = LogManager.getLogger(HistoryDAO.class);
 	private final Map<String, TreeMap<Long, Long>> indexes = new HashMap<>(16);
-
+	
+	public void dbhashAll(String format) throws IOException {
+		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH);
+		for(File f : path.toFile().listFiles()) {
+			String cross = f.getName().replaceAll(".csv", "");
+			dbhash(cross, format);
+		}
+	}
+	public void dbhashAll() throws IOException {
+		String format = ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
+		dbhashAll(format);
+	}
+	
 	public boolean dbhash(String cross, String format) throws IOException {
 		return indexes.put(cross, javaDbHash(cross, format)) == null;
 	}
 	public boolean dbhash(String cross) throws IOException {
 		return indexes.put(cross, javaDbHash(cross)) == null;
 	}
-		TreeMap<Long, Long> javaDbHash(String pathToFile) throws IOException {
-		return javaDbHash(pathToFile, "o,h,l,c,v dd/mm/yyyy HH:MM");
+	TreeMap<Long, Long> javaDbHash(String pathToFile) throws IOException {
+		String format = ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
+		return javaDbHash(pathToFile, format);
 	}   
 
 	TreeMap<Long, Long> javaDbHash(String pathToFile, String recordFormat) throws IOException {
@@ -98,7 +112,7 @@ public class HistoryDAO {
 		boolean found = false;
 		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + ProtocolConstants.BKT_DATA_EXTENSION);
 		RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r");
-		HistoryRecordBuilder hrb = new HistoryRecordBuilder("yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		HistoryRecordBuilder hrb = new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_HISTORY_PATTERN);
 		raf.seek(checkpoint.getValue());
 		String recordAsString;
 		while (!found && (recordAsString = raf.readLine()) != null) {
@@ -123,7 +137,7 @@ public class HistoryDAO {
 	}
 
 	final String readLine(ByteBuffer bb) throws IOException {
-        StringBuffer input = new StringBuffer();
+        StringBuilder input = new StringBuilder();
         int c = -1;
         boolean eol = false;
         while (!eol) {
@@ -159,16 +173,4 @@ public class HistoryDAO {
         }
         return input.toString();
     }
-
-	public static void main(String[] args) throws IOException {
-		System.setProperty("ENV", "test");
-		HistoryDAO dao = new HistoryDAO();
-		TreeMap<Long, Long> map = dao.javaDbHash("eurusd",  "yyyy.mm.dd,HH:MM,o,h,l,c,v");
-		RandomAccessFile raf = new RandomAccessFile("./history/test/eurusd.csv", "r");
-		for (Entry<Long, Long> entry : map.entrySet()) {
-			raf.seek(entry.getValue());
-			System.out.println(raf.readLine());
-		}
-		raf.close();
-	}
 }

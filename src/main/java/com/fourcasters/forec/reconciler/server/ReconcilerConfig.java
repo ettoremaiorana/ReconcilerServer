@@ -16,6 +16,7 @@ public class ReconcilerConfig {
 	}
 
 	public static final String BKT_DATA_PATH;
+	public static final String DEFAULT_HISTORY_PATTERN;
 
 	static {
 		try {
@@ -37,6 +38,7 @@ public class ReconcilerConfig {
 			if (BKT_DATA_PATH == null) {
 				throw new IllegalStateException("Unspecified bkt data path for env " + env.toString());
 			}
+			DEFAULT_HISTORY_PATTERN = p.getProperty("bkt.data.format", "o,h,l,c,v\u0020dd/mm/yyyy\u0020HH:MM");
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
