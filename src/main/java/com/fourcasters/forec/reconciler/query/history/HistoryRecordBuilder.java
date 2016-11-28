@@ -3,7 +3,10 @@ package com.fourcasters.forec.reconciler.query.history;
 import java.util.GregorianCalendar;
 import java.util.function.BiConsumer;
 
-public class HistoryRecordBuilder {
+import com.fourcasters.forec.reconciler.query.Record;
+import com.fourcasters.forec.reconciler.query.RecordBuilder;
+
+public class HistoryRecordBuilder extends RecordBuilder {
 
 	private final static BiConsumer<String, HistoryRecord> DEFAULT_PARSER = (s, hr) -> {
 		HistoryRecordInputStream stream = new HistoryRecordInputStream(s);
@@ -51,7 +54,7 @@ public class HistoryRecordBuilder {
 		return DEFAULT_PARSER; //TODO
 	}
 
-	HistoryRecord newRecord(String recordAsString) {
+	public Record newRecord(String recordAsString) {
 		if (!recordAsString.isEmpty()) {
 			final HistoryRecord record = new HistoryRecord();
 			recordParser.accept(recordAsString, record);
@@ -63,10 +66,9 @@ public class HistoryRecordBuilder {
 		else {
 			throw new HistoryRecordParsingException("Cannot parse a record from an empty string");
 		}
-		
 	}
 
-	static final class HistoryRecord {
+	static final class HistoryRecord extends Record {
 		private short volume;
 		private short day;
 		private short month;
@@ -120,11 +122,11 @@ public class HistoryRecordBuilder {
 			close = stream.nextDouble(c);
 		}
 
-		public static boolean sameHour(HistoryRecord curr, HistoryRecord prev) {
-			if (prev == null || curr == null) {
+		public boolean sameHour(HistoryRecord prev) {
+			if (prev == null) {
 				return false;
 			}
-			return curr.hour == prev.hour;
+			return this.hour == prev.hour;
 		}
 
 
@@ -133,6 +135,14 @@ public class HistoryRecordBuilder {
 			return "HistoryRecord [volume=" + volume + ", day=" + day + ", month=" + month + ", year=" + year + ", hour="
 					+ hour + ", minute=" + minute + ", timestamp=" + timestamp + ", close=" + close + ", open=" + open
 					+ ", high=" + high + ", low=" + low + "]";
+		}
+		@Override
+		public boolean hasToIndex(Record prev) {
+			return sameHour((HistoryRecord)prev);
+		}
+		@Override
+		public Long index() {
+			return timestamp;
 		}
 
 	}

@@ -5,22 +5,12 @@
  */
 package com.fourcasters.forec.reconciler.query.history;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import com.fourcasters.forec.reconciler.query.history.HistoryRecordBuilder.HistoryRecord;
+import com.fourcasters.forec.reconciler.query.IndexableDAO;
+import com.fourcasters.forec.reconciler.query.RecordBuilder;
 import com.fourcasters.forec.reconciler.server.ProtocolConstants;
 import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
 
@@ -28,149 +18,29 @@ import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
  *
  * @author ettoremaiorana
  */
-public class HistoryDAO {
+public class HistoryDAO extends IndexableDAO {
 
-	private static final Logger LOG = LogManager.getLogger(HistoryDAO.class);
-	private final Map<String, TreeMap<Long, Long>> indexes = new HashMap<>(16);
-	
-	public void dbhashAll(String format) throws IOException {
-		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH);
-		for(File f : path.toFile().listFiles()) {
-			String cross = f.getName().replaceAll(".csv", "");
-			dbhash(cross, format);
-		}
-	}
-	public void dbhashAll() throws IOException {
-		String format = ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
-		dbhashAll(format);
+	@Override
+	public Path getRootPath() {
+		return Paths.get(ReconcilerConfig.BKT_DATA_PATH);
 	}
 	
-	public boolean dbhash(String cross, String format) throws IOException {
-		return indexes.put(cross, javaDbHash(cross, format)) == null;
-	}
-	public boolean dbhash(String cross) throws IOException {
-		return indexes.put(cross, javaDbHash(cross)) == null;
-	}
-	TreeMap<Long, Long> javaDbHash(String pathToFile) throws IOException {
-		String format = ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
-		return javaDbHash(pathToFile, format);
-	}   
-
-	TreeMap<Long, Long> javaDbHash(String pathToFile, String recordFormat) throws IOException {
-		pathToFile = pathToFile.toLowerCase();
-		TreeMap<Long, Long> hash = new TreeMap<>();
-		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, pathToFile + ProtocolConstants.BKT_DATA_EXTENSION);
-		RandomAccessFile sc = new RandomAccessFile(path.toFile(), "r");
-		String recordAsString;
-		HistoryRecordBuilder recordBuilder = new HistoryRecordBuilder(recordFormat);
-
-		byte[] buff = new byte[4096];
-		boolean finished = false;
-		int rem = 0;
-		long totalBytes = 0;
-		HistoryRecord prev = null;
-		while (!finished) {
-			int bytesRead = sc.read(buff, rem, 4096);
-			ByteBuffer bb = ByteBuffer.wrap(buff);
-			while ((recordAsString = readLine(bb)) != null) {
-				HistoryRecord curr = recordBuilder.newRecord(recordAsString);
-				if (!HistoryRecord.sameHour(curr, prev)) {
-					hash.put(curr.timestamp(), totalBytes);
-				}
-				prev = curr;
-				totalBytes += (recordAsString.length() + 2); // /r/n
-			}
-			rem = 0;
-			if (bb.remaining() > 0 ) {
-				rem = bb.remaining();
-			}
-			buff = new byte[4096+rem];
-			bb.get(buff, 0 , rem);
-			if (bytesRead < 4096) {
-				finished = true;
-			}
-		}
-		
-		sc.close();
-		LOG.info(pathToFile + " generated an index file of " + hash.size() + " entries");
-		return hash;
+	@Override
+	public String getDefaultFormat() {
+		return ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
 	}
 
-	public long offset(String cross, Date date, boolean exact) throws IOException {
-		long timestamp = date.getTime();
-
-		TreeMap<Long, Long> index = indexes.get(cross);
-		if (index == null) {
-			return -1;
-		}
-		Entry<Long, Long> checkpoint = index.floorEntry(timestamp);
-		if (checkpoint == null) {
-			return -1;
-		}
-		LOG.debug("Checkpoint: " + checkpoint);
-		long offset = -1;
-		boolean found = false;
-		final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + ProtocolConstants.BKT_DATA_EXTENSION);
-		RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r");
-		HistoryRecordBuilder hrb = new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_HISTORY_PATTERN);
-		raf.seek(checkpoint.getValue());
-		String recordAsString;
-		while (!found && (recordAsString = raf.readLine()) != null) {
-			HistoryRecord record = hrb.newRecord(recordAsString);
-			LOG.info("Record: " + record);
-			if (record.timestamp() >= timestamp) {
-				found = true;
-				offset = exact ? raf.getFilePointer()
-						: raf.getFilePointer() - recordAsString.length() - 2;
-			}
-		}
-		raf.close();
-		return offset;
+	@Override
+	public Path getFilePath(String cross) {
+		return Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + ProtocolConstants.BKT_DATA_EXTENSION);
+	}
+	@Override
+	public RecordBuilder getRecordBuilder(String recordFormat) {
+		return new HistoryRecordBuilder(recordFormat);
 	}
 
-	int hashCount(String cross) {
-		TreeMap<Long, Long> index = indexes.get(cross);
-		if (index == null) {
-			return -1;
-		}
-		return index.size();
+	@Override
+	public RecordBuilder getRecordBuilder() {
+		return new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_HISTORY_PATTERN);
 	}
-
-	final String readLine(ByteBuffer bb) throws IOException {
-        StringBuilder input = new StringBuilder();
-        int c = -1;
-        boolean eol = false;
-        while (!eol) {
-        	if (!bb.hasRemaining()) {
-        		break;
-        	}
-            switch ((c = bb.get())) {
-            case -1:
-            case '\n':
-                eol = true;
-                break;
-            case '\r':
-            	if (bb.hasRemaining()) {
-            		eol = true;
-            		if ((bb.get()) != '\n') {
-            			throw new RuntimeException();
-            		}
-            		break;
-            	}
-            	input.append((char)c);
-            	break;
-            default:
-                input.append((char)c);
-                break;
-            }
-        }
-        if (!eol) {
-        	bb.position(bb.limit() - input.length());
-        	return null;
-        }
-        if ((c == -1) && (input.length() == 0)) {
-            return null;
-        }
-        return input.toString();
-    }
 }

@@ -61,7 +61,7 @@ public class HistoryDAOTest {
 		String record;
 		int counter = 0;
 		while ((record = file.readLine()) != null) {
-			HistoryRecord r = builder.newRecord(record);
+			HistoryRecord r = (HistoryRecord) builder.newRecord(record);
 			if (r.minute() == 0) {
 				counter++;
 			}
