@@ -29,79 +29,78 @@ public abstract class IndexableDAO {
 		cross = cross.toLowerCase();
 		TreeMap<Long, Long> hash = new TreeMap<>();
 		final Path path = getFilePath(cross);
-		RandomAccessFile sc = new RandomAccessFile(path.toFile(), "r");
-		String recordAsString;
-		RecordBuilder recordBuilder = getRecordBuilder(recordFormat);
+		try(RandomAccessFile sc = new RandomAccessFile(path.toFile(), "r");){
+			String recordAsString;
+			RecordBuilder recordBuilder = getRecordBuilder(recordFormat);
 
-		byte[] buff = new byte[4096];
-		boolean finished = false;
-		int rem = 0;
-		long totalBytes = 0;
-		Record prev = null;
-		while (!finished) {
-			int bytesRead = sc.read(buff, rem, 4096);
-			ByteBuffer bb = ByteBuffer.wrap(buff);
-			while ((recordAsString = readLine(bb)) != null) {
-				Record curr = recordBuilder.newRecord(recordAsString);
-				if (!curr.hasToIndex(prev)) {
-					hash.put(curr.index(), totalBytes);
+			byte[] buff = new byte[4096];
+			boolean finished = false;
+			int rem = 0;
+			long totalBytes = 0;
+			Record prev = null;
+			while (!finished) {
+				int bytesRead = sc.read(buff, rem, 4096);
+				ByteBuffer bb = ByteBuffer.wrap(buff);
+				while ((recordAsString = readLine(bb)) != null) {
+					Record curr = recordBuilder.newRecord(recordAsString);
+					if (!curr.hasToIndex(prev)) {
+						hash.put(curr.index(), totalBytes);
+					}
+					prev = curr;
+					totalBytes += (recordAsString.length() + 2); // /r/n
 				}
-				prev = curr;
-				totalBytes += (recordAsString.length() + 2); // /r/n
-			}
-			rem = 0;
-			if (bb.remaining() > 0 ) {
-				rem = bb.remaining();
-			}
-			buff = new byte[4096+rem];
-			bb.get(buff, 0 , rem);
-			if (bytesRead < 4096) {
-				finished = true;
+				rem = 0;
+				if (bb.remaining() > 0 ) {
+					rem = bb.remaining();
+				}
+				buff = new byte[4096+rem];
+				bb.get(buff, 0 , rem);
+				if (bytesRead < 4096) {
+					finished = true;
+				}
 			}
 		}
-		
-		sc.close();
 		LOG.info(cross + " generated an index file of " + hash.size() + " entries");
 		return hash;
 	}
 
 	final String readLine(ByteBuffer bb) throws IOException {
-        StringBuilder input = new StringBuilder();
-        int c = -1;
-        boolean eol = false;
-        while (!eol) {
-        	if (!bb.hasRemaining()) {
-        		break;
-        	}
-            switch ((c = bb.get())) {
-            case -1:
-            case '\n':
-                eol = true;
-                break;
-            case '\r':
-            	if (bb.hasRemaining()) {
-            		eol = true;
-            		if ((bb.get()) != '\n') {
-            			throw new RuntimeException();
-            		}
-            		break;
-            	}
-            	input.append((char)c);
-            	break;
-            default:
-                input.append((char)c);
-                break;
-            }
-        }
-        if (!eol) {
-        	bb.position(bb.limit() - input.length());
-        	return null;
-        }
-        if ((c == -1) && (input.length() == 0)) {
-            return null;
-        }
-        return input.toString();
-    }
+		StringBuilder input = new StringBuilder();
+		int c = -1;
+		boolean eol = false;
+		while (!eol) {
+			if (!bb.hasRemaining()) {
+				break;
+			}
+			switch ((c = bb.get())) {
+			case -1:
+			case '\n':
+				eol = true;
+				break;
+			case '\r':
+				if (bb.hasRemaining()) {
+					eol = true;
+					if ((bb.get()) != '\n') {
+						throw new RuntimeException();
+					}
+					break;
+				}
+				input.append((char)c);
+				break;
+			default:
+				input.append((char)c);
+				break;
+			}
+		}
+		if (!eol) {
+			bb.position(bb.limit() - input.length());
+			return null;
+		}
+		if ((c == -1) && (input.length() == 0)) {
+			return null;
+		}
+		return input.toString();
+	}
 
 	public boolean dbhash(String cross, String format) throws IOException {
 		return indexes.put(cross, javaDbHash(cross, format)) == null;
@@ -135,28 +134,35 @@ public abstract class IndexableDAO {
 		long offset = -1;
 		boolean found = false;
 		final Path path = getFilePath(cross);
-		RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r");
-		RecordBuilder hrb = getRecordBuilder();
-		raf.seek(checkpoint.getValue());
-		String recordAsString;
-		while (!found && (recordAsString = raf.readLine()) != null) {
-			Record record = hrb.newRecord(recordAsString);
-			LOG.info("Record: " + record);
-			if (record.index() >= timestamp) {
-				found = true;
-				offset = exact ? raf.getFilePointer()
-						: raf.getFilePointer() - recordAsString.length() - 2;
+		try(RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r");) {
+			RecordBuilder hrb = getRecordBuilder();
+			raf.seek(checkpoint.getValue());
+			String recordAsString;
+			while (!found && (recordAsString = raf.readLine()) != null) {
+				Record record = hrb.newRecord(recordAsString);
+				LOG.info("Record: " + record);
+				if (record.index() >= timestamp) {
+					found = true;
+					offset = exact ? raf.getFilePointer()
+							: raf.getFilePointer() - recordAsString.length() - 2;
+				}
 			}
 		}
-		raf.close();
 		return offset;
 	}
 	public abstract Path getRootPath();
 
 	public void dbhashAll(String format) throws IOException {
-		final Path path = getRootPath();
-		for(File f : path.toFile().listFiles()) {
-			String cross = f.getName().replaceAll(".csv", "");
+		final File root = getRootPath().toFile();
+		if (!root.isDirectory()) {
+			throw new IllegalArgumentException("Unable to read table files from non directory " + root);
+		}
+		for(File f : root.listFiles()) {
+			String cross = f.getName();
+			int pos = cross.lastIndexOf(".");
+			if (pos > 0) {
+				cross = cross.substring(0, pos);
+			}
 			dbhash(cross, format);
 		}
 	}

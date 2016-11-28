@@ -18,6 +18,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -71,7 +72,7 @@ public class ReconcilerBroker {
 	final void run() throws IOException, UnsupportedEncodingException, URISyntaxException {
 		if ("stop".equals(System.getProperty("debug"))) {
 			LOG.info("Write anything and then press enter to let the program start");
-			new BufferedReader(new InputStreamReader(System.in)).readLine();
+			new BufferedReader(new InputStreamReader(System.in, StandardCharsets.US_ASCII)).readLine();
 		}
 		final Context ctx = application.context();
 		final Socket server = zmqSetup(ctx);

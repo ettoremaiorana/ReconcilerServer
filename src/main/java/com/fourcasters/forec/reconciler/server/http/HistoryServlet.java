@@ -23,7 +23,7 @@ import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
 public class HistoryServlet extends AbstractServlet {
 
 	private static final Logger LOG = LogManager.getLogger(HistoryServlet.class);
-	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
+	private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
 	private final HistoryDAO historyDao;
 
 	HistoryServlet(HttpParser httpParser, HistoryDAO dao) {

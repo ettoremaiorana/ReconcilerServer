@@ -31,33 +31,38 @@ public class TradeEventCapturer implements MessageHandler {
 	public void enqueue(String topic, String data) {
 		final String newTopic = "RECONC@ACTIVTRADES" + topic.substring(topic.indexOf("@"));
 		//example: buffer = status + "," + type + "," + price + "," + ticket;
-		final long ticket = Long.parseLong(data.split(",")[3].trim());
+		final String[] tokens = data.split(",");
+		final long ticket = Long.parseLong(tokens[3].trim());
+		final int status = Integer.parseInt(tokens[0].trim());
 		//example: topic = topic_name + "@" + cross + "@" + algo_id
 		final int algoId = Integer.parseInt(topic.split("@")[2].trim());
 
-		final Future<?> closedTradesfuture = application.executor().submit(
-			() -> {
-				sendEmail(algoId, ticket, data);
-				final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
-				System.out.println("closedTradesFuture result = " + result);
-			}
-		);
-		application.futureTasks().add(closedTradesfuture);
+		if (status > 0) { //success
 
-		final Future<?> openTradesFuture = application.executor().submit(
-			() -> {
-				final boolean result = messageSender.askForOpenTrades(newTopic);
-				System.out.println("openTradesFuture result = " + result);
-			}
-		);
-		application.futureTasks().add(openTradesFuture);
+			final Future<?> closedTradesfuture = application.executor().submit(
+					() -> {
+						sendEmail(algoId, ticket, data);
+						final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
+						System.out.println("closedTradesFuture result = " + result);
+					}
+				);
+			application.futureTasks().add(closedTradesfuture);
 
-		final Future<?> perfCalcFuture = application.executor().submit(new PerformanceCalcTask(topic, application));
-		application.futureTasks().add(perfCalcFuture);
+			final Future<?> openTradesFuture = application.executor().submit(
+					() -> {
+						final boolean result = messageSender.askForOpenTrades(newTopic);
+						System.out.println("openTradesFuture result = " + result);
+					}
+				);
+			application.futureTasks().add(openTradesFuture);
 
-		final Future<?> strategiesCaptureFuture = application.executor().submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
-		application.futureTasks().add(strategiesCaptureFuture);
+			final Future<?> perfCalcFuture = application.executor().submit(new PerformanceCalcTask(topic, application));
+			application.futureTasks().add(perfCalcFuture);
 
+			final Future<?> strategiesCaptureFuture = application.executor().submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
+			application.futureTasks().add(strategiesCaptureFuture);
+
+		}
 
 	}
 
