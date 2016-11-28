@@ -31,7 +31,7 @@ public class TradeEventCapturerTest {
 	@Test
 	public void onNewTradePerformanceCalcIsTriggered() {
 		String topic = "hello" + "@" + "anycross" + "@" + "12345678";
-		String data  = "status" + "," + "1" + "," + "87678" + "," + "987654321";
+		String data  = 1 + "," + "close" + "," + "87678" + "," + "987654321";
 		capture.enqueue(topic, data);
 		verify(application.executor(), times(1)).submit(isA(PerformanceCalcTask.class));
 		verify(application.executor(), times(1)).submit(isA(StrategiesCaptureTask.class));
