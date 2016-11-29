@@ -5,7 +5,6 @@
  */
 package com.fourcasters.forec.reconciler.query.history;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

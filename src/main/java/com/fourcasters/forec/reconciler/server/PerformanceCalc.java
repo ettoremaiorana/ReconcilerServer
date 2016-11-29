@@ -54,7 +54,7 @@ public class PerformanceCalc {
 					application.selectorTasks().add(new SelectorTask() {
 						@Override
 						public void run() {
-							if (PerformanceCalcTask.this.backoffTime < 3200) {
+							if (PerformanceCalcTask.this.backoffTime < MAX_BACKOFF_TIME) {
 								PerformanceCalcTask.this.backoffTime *= 2;
 								application.futureTasks().add(
 										application.executor().submit(PerformanceCalcTask.this)

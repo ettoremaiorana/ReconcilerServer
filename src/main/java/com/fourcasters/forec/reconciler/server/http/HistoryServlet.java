@@ -1,9 +1,9 @@
 package com.fourcasters.forec.reconciler.server.http;
 
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.BKT_DATA_EXTENSION;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER_HTTP;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_HEADER;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -51,7 +51,7 @@ public class HistoryServlet extends AbstractServlet {
 				LOG.debug("to: " + to);
 				long start = historyDao.offset(cross, from, false);
 				long end = historyDao.offset(cross, to, true);
-				transfered = sendFile(clientChannel, RESPONSE_OK_HEADER, path, start, end);
+				transfered = sendFile(clientChannel, RESPONSE_OK_HEADER_HTTP, path, start, end);
 			}
 			catch (ParseException e){
 				LOG.error(e.getMessage());

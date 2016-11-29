@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Random;
@@ -91,6 +92,8 @@ abstract class AbstractServlet {
 		try {
 			readChannel = FileChannel.open(filePath, StandardOpenOption.READ);
 			clientChannel.write(ByteBuffer.wrap(header));
+			clientChannel.write(ByteBuffer.wrap("<html><body>".getBytes(StandardCharsets.US_ASCII)));
+			
 			do {
 				int remaining = (int)(end-position);
 				int length = Math.min(1024*1024, remaining);
@@ -98,7 +101,7 @@ abstract class AbstractServlet {
 				position += transfered;
 				LOG.debug("Sending...");
 			} while(position < end);
-			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
+			clientChannel.write(ByteBuffer.wrap("</body></html>\r\n".getBytes(CHARSET)));
 
 		}
 		finally {
