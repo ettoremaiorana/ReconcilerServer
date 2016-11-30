@@ -1,7 +1,8 @@
 package com.fourcasters.forec.reconciler.server.http;
 
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.BKT_DATA_EXTENSION;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER_HTTP;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER_JSON;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_HEADER;
 
@@ -51,7 +52,13 @@ public class HistoryServlet extends AbstractServlet {
 				LOG.debug("to: " + to);
 				long start = historyDao.offset(cross, from, false);
 				long end = historyDao.offset(cross, to, true);
-				transfered = sendFile(clientChannel, RESPONSE_OK_HEADER_HTTP, path, start, end);
+				String responseFormat = httpParser.getParam("format");
+				if (responseFormat != null && responseFormat.equals("json")) {
+					transfered = sendJson(clientChannel, RESPONSE_OK_HEADER_JSON, path, start, end);
+				}
+				else {
+					transfered = sendFile(clientChannel, RESPONSE_OK_HEADER, path, start, end);
+				}
 			}
 			catch (ParseException e){
 				LOG.error(e.getMessage());

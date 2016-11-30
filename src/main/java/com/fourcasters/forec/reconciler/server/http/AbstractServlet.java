@@ -92,22 +92,44 @@ abstract class AbstractServlet {
 		try {
 			readChannel = FileChannel.open(filePath, StandardOpenOption.READ);
 			clientChannel.write(ByteBuffer.wrap(header));
-			clientChannel.write(ByteBuffer.wrap("<html><body>".getBytes(StandardCharsets.US_ASCII)));
-			
-			do {
-				int remaining = (int)(end-position);
-				int length = Math.min(1024*1024, remaining);
-				long transfered = readChannel.transferTo(position, length, clientChannel);
-				position += transfered;
-				LOG.debug("Sending...");
-			} while(position < end);
-			clientChannel.write(ByteBuffer.wrap("</body></html>\r\n".getBytes(CHARSET)));
+			position = sendFileToClient(clientChannel, readChannel, end, position);
+			clientChannel.write(ByteBuffer.wrap("\r\n".getBytes(CHARSET)));
 
 		}
 		finally {
 			if(readChannel != null) readChannel.close();
 		}
 		return position - start;
+	}
+	
+	static long sendJson(final SocketChannel clientChannel, byte[] header, Path filePath, long start, long end) throws IOException {
+		FileChannel readChannel = null;
+		long position = start;
+		try {
+			readChannel = FileChannel.open(filePath, StandardOpenOption.READ);
+			clientChannel.write(ByteBuffer.wrap(header));
+			clientChannel.write(ByteBuffer.wrap("{\"data\":\"".getBytes(StandardCharsets.US_ASCII)));
+			
+			position = sendFileToClient(clientChannel, readChannel, end, position);
+			clientChannel.write(ByteBuffer.wrap("\"}\r\n".getBytes(CHARSET)));
+
+		}
+		finally {
+			if(readChannel != null) readChannel.close();
+		}
+		return position - start;
+	}
+
+	static long sendFileToClient(final SocketChannel clientChannel, FileChannel readChannel, 
+			long end, long position) throws IOException {
+		do {
+			int remaining = (int)(end-position);
+			int length = Math.min(1024*1024, remaining);
+			long transfered = readChannel.transferTo(position, length, clientChannel);
+			position += transfered;
+			LOG.debug("Sending...");
+		} while(position < end);
+		return position;
 	}
 
 	boolean validateMethod(HttpParser httpParser, SocketChannel clientChannel, String param, String errorMessage) throws IOException {
