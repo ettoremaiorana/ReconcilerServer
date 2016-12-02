@@ -15,7 +15,7 @@ public class MessageHandlerFactory {
 	private final Identity identity;
 
 	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender, StrategiesTracker strategiesTracker) {
-		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application), application), application);
+		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application, reconcMessageSender), application), application);
 		forwarder = Forwarder.create(application);
 		tradeAppender = new TradeEventCapturer(application, reconcMessageSender, strategiesTracker);
 		logger = new Logger();

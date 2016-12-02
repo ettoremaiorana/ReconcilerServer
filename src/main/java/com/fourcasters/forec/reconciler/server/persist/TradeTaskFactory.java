@@ -7,11 +7,15 @@ import static com.fourcasters.forec.reconciler.server.ProtocolConstants.OPEN_TRA
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
+import com.fourcasters.forec.reconciler.server.ReconcilerMessageSender;
+import com.fourcasters.forec.reconciler.server.SelectorTask;
 
 public class TradeTaskFactory {
 
@@ -19,19 +23,48 @@ public class TradeTaskFactory {
 	private static final File open_trades_file = new File(OPEN_TRADES_FILE_NAME);
 	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
 	//	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
-
-	public TradeTaskFactory(ApplicationInterface application) {
+	private final ReconcilerMessageSender reconcilerMessageSender;
+	private final ApplicationInterface application;
+	
+	public TradeTaskFactory(ApplicationInterface application, ReconcilerMessageSender reconcilerMessageSender) {
+		this.application = application;
+		this.reconcilerMessageSender = reconcilerMessageSender;
 	}
 
+	TransactionPhaseListener openTradesTransactionCompletionListener = new TransactionPhaseListener() {
+		
+		@Override
+		public void onTransactionStart(int transId) {
+		}
+		
+		@Override
+		public void onTransactionEnd(int transId) {
+			application.selectorTasks().add(new SelectorTask() {
+				@Override
+				public void run() {
+					LOG.info("Open trades transaction completed, starting a new one");
+					reconcilerMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+				}
+			});
+		}
+		
+		@Override
+		public void onTaskStart() {
+		}
+		
+		@Override
+		public void onTaskEnd() {
+		}
+	};
 
 	public OpenTradeTask newOpenTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
 		LOG.info("TransId " + transId + " -> opens, first? " + first);
-		return new OpenTradeTask(new MultiPartsTransaction(tradesInMessage, listener, transId, first, open_trades_file));
+		return new OpenTradeTask(new MultiPartsTransaction(tradesInMessage, Arrays.asList(listener, openTradesTransactionCompletionListener) , transId, first, open_trades_file));
 	}
 
 	public FullTask newFullReconciliationTask(final String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
 		LOG.info("TransId " + transId + " -> full, first? " + first);
-		return new FullTask(new MultiPartsTransaction(tradesInMessage, listener, transId, first, closed_trades_file));
+		return new FullTask(new MultiPartsTransaction(tradesInMessage, Arrays.asList(listener), transId, first, closed_trades_file));
 	}
 
 	public SingleTradeTask newSingleTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId) {
@@ -78,13 +111,13 @@ public class TradeTaskFactory {
 		private final File file;
 		private final boolean first;
 		private final int transId;
-		private final TransactionPhaseListener listener;
+		private final List<TransactionPhaseListener> listeners;
 		private final String tradesInMessage;
 
-		private MultiPartsTransaction(String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first, File f) {
+		private MultiPartsTransaction(String tradesInMessage, List<TransactionPhaseListener> listeners, int transId, boolean first, File f) {
 			this.file = f;
 			this.tradesInMessage = tradesInMessage;
-			this.listener = listener;
+			this.listeners = listeners;
 			this.transId = transId;
 			this.first = first;
 		}
@@ -92,17 +125,22 @@ public class TradeTaskFactory {
 
 		@Override
 		public String toString() {
-			return "MultiPartsTransaction [file=" + file + ", first=" + first + ", transId=" + transId + ", listener="
-					+ listener + ", tradesInMessage=" + tradesInMessage + "]";
+			return "MultiPartsTransaction [file=" + file + ", first=" + first + ", transId=" + transId + ", listeners="
+					+ listeners + ", tradesInMessage=" + tradesInMessage + "]";
 		}
 
 
 		@Override
 		public void run() {
+			if (first) {
+				for (TransactionPhaseListener listener : listeners) {
+					listener.onTransactionStart(transId);
+				}
+			}
 			final String[] trades = tradesInMessage.split("\\|");
 			//if last bit of data is not 'more', we create a new selector task to end the transaction
 			final boolean append = !first;
-			final boolean toBeContinued = trades[trades.length - 1].trim().equals("more");
+			boolean toBeContinued = trades[trades.length - 1].trim().equals("more");
 			if (toBeContinued) {
 				trades[trades.length - 1] = "";
 			}
@@ -116,12 +154,14 @@ public class TradeTaskFactory {
 				pw.write(trades[trades.length - 1].getBytes(CHARSET));
 				pw.flush();
 			} catch (IOException e) {
+				toBeContinued = false;
 				throw new RuntimeException("Unable to write", e);
 			}
 			finally {
-				listener.onTaskEnd();
 				if (!toBeContinued) {
-					listener.onTransactionEnd(transId);
+					for (TransactionPhaseListener listener : listeners) {
+						listener.onTransactionEnd(transId);
+					}
 				}
 			}
 

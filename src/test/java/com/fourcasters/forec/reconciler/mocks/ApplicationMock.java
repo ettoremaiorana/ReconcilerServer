@@ -4,7 +4,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -17,7 +16,7 @@ import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
 public class ApplicationMock implements ApplicationInterface {
 
-	private BlockingQueue<SelectorTask> selectorTask = new ArrayBlockingQueue<>(512);
+	private BlockingQueue<SelectorTask> selectorTask = Mockito.mock(BlockingQueue.class);
 	private Deque<Future<?>> futureTasks = new ArrayDeque<>();
 	private ExecutorService executor = Mockito.mock(ExecutorService.class);
 	@SuppressWarnings("rawtypes")

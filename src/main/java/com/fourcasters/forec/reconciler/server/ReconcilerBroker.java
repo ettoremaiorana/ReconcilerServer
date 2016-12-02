@@ -86,7 +86,7 @@ public class ReconcilerBroker {
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
 		dao.dbhashAll();
-		application.executor().scheduleAtFixedRate(() -> consumer.accept(reconcMessageSender), 300L, 300L, TimeUnit.SECONDS);
+		application.executor().schedule(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 300L, TimeUnit.SECONDS);
 
 		running = true;
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
@@ -265,7 +265,7 @@ public class ReconcilerBroker {
 		return recvDataSize;
 	}
 
-	private static final Consumer<ReconcilerMessageSender> consumer = new Consumer<ReconcilerMessageSender>() {
+	private static final Consumer<ReconcilerMessageSender> OPEN_TRADE_SCHEDULE = new Consumer<ReconcilerMessageSender>() {
 
 		@Override
 		public void accept(ReconcilerMessageSender t) {

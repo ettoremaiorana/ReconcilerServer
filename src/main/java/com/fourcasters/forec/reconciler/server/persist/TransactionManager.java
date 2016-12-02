@@ -19,7 +19,7 @@ import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTr
 public class TransactionManager implements TransactionPhaseListener {
 
 	private static final Logger LOG = LogManager.getLogger(TransactionManager.class);
-	private int tasksToRun;
+	private volatile int tasksToRun;
 	private final TradeTaskFactory taskFactory;
 	private final LinkedHashMap<Integer, Transaction> transactions = new LinkedHashMap<>();
 	private final ApplicationInterface application;
@@ -143,6 +143,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		private int waiting;
 		private final Deque<Runnable> tasks;
 		private boolean completed;
+		private boolean started;
 
 		private Transaction(Deque<Runnable> tasks) {
 			this.waiting = 10;
@@ -163,6 +164,10 @@ public class TransactionManager implements TransactionPhaseListener {
 			completed = true;
 		}
 
+		void start() {
+			started = true;
+		}
+
 		@Override
 		public String toString() {
 			return "Transaction [waiting=" + waiting + ", tasks=" + tasks + ", completed=" + completed + "]";
@@ -172,6 +177,24 @@ public class TransactionManager implements TransactionPhaseListener {
 
 	@Override
 	public void onTransactionStart(int transId) {
+		LOG.info("TransId " + transId + " -> on transaction start");
+		application.selectorTasks().add(new SelectorTask() {
+			@Override
+			public void run() {
+				LOG.info("transaction.size.before? " + transactions.size());
+				final Transaction t = transactions.get(transId);
+				if (t != null) {
+					t.started = true;
+					LOG.info("TransId " + transId + " -> started? " + t.started);
+				}
+				else {
+					LOG.info("TransId " + transId + " -> NULL ");	
+				}
+				LOG.info("transaction.size.after? " + transactions.size());
+
+			}
+		});
+
 	}
 
 	@Override

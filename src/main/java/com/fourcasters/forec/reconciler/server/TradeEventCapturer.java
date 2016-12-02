@@ -43,7 +43,7 @@ public class TradeEventCapturer implements MessageHandler {
 					() -> {
 						sendEmail(algoId, ticket, data);
 						final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
-						System.out.println("closedTradesFuture result = " + result);
+						LOG.info("closedTradesFuture result = " + result);
 					}
 				);
 			application.futureTasks().add(closedTradesfuture);
@@ -51,7 +51,7 @@ public class TradeEventCapturer implements MessageHandler {
 			final Future<?> openTradesFuture = application.executor().submit(
 					() -> {
 						final boolean result = messageSender.askForOpenTrades(newTopic);
-						System.out.println("openTradesFuture result = " + result);
+						LOG.info("openTradesFuture result = " + result);
 					}
 				);
 			application.futureTasks().add(openTradesFuture);
