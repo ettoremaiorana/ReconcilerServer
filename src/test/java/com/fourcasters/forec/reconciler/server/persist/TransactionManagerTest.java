@@ -51,13 +51,13 @@ public class TransactionManagerTest {
 	@Test
 	public void onNewTaskPollingRequestIsEnqueued() {
 		transactionManager.onFullTransaction(67890, "z,z,z,z,z,z||y,y,y,y,y,y||more");
-		assertEquals(1, application.selectorTasks().size());
+		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class));
 		transactionManager.onFullTransaction(67890, "a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x");
-		assertEquals(2, application.selectorTasks().size());
+		verify(application.selectorTasks(), times(2)).add(any(SelectorTask.class));
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
-		assertEquals(3, application.selectorTasks().size());
+		verify(application.selectorTasks(), times(3)).add(any(SelectorTask.class));
 		transactionManager.onSingleTransaction(12345, "a,b,c,d,e,f");
-		assertEquals(4, application.selectorTasks().size());
+		verify(application.selectorTasks(), times(4)).add(any(SelectorTask.class));
 	}
 
 
@@ -76,7 +76,7 @@ public class TransactionManagerTest {
 		transactionManager.onSingleTransaction(12345, "a,b,c,d,e,f");
 		assertEquals(1, transactionManager.numberOfTransactions()); //one task
 		assertEquals(1, transactionManager.tasksToRun()); //one task
-		assertEquals(1, application.selectorTasks().size()); //decrease tasksToRun
+		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class)); //decrease tasksToRun
 	}
 
 	@Test
@@ -84,7 +84,7 @@ public class TransactionManagerTest {
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
 		assertEquals(1, transactionManager.numberOfTransactions()); //one task
 		assertEquals(1, transactionManager.tasksToRun()); //one task
-		assertEquals(1, application.selectorTasks().size()); //decrease tasksToRun
+		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class));//decrease tasksToRun
 	}
 
 	@SuppressWarnings("unchecked")
