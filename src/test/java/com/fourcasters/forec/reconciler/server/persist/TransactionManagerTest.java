@@ -93,15 +93,23 @@ public class TransactionManagerTest {
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
 		ArgumentCaptor<SelectorTask> taskCapture = ArgumentCaptor.forClass(SelectorTask.class);
 		verify(application.selectorTasks(), times(1)).add(taskCapture.capture());
-		taskCapture.getValue().run();
 		reset(application.selectorTasks());
+		
+		taskCapture.getValue().run(); //Polling task
 		ArgumentCaptor<Runnable> taskCapture1 = ArgumentCaptor.forClass(Runnable.class);
 		verify(application.executor(), times(1)).submit(taskCapture1.capture());
-		taskCapture1.getValue().run();
 		reset(application.executor());
+
+		taskCapture1.getValue().run();//Open trade task
 		verify(sender, never()).askForOpenTrades(any(String.class));
 		ArgumentCaptor<SelectorTask> taskCapture2 = ArgumentCaptor.forClass(SelectorTask.class);
-		verify(application.selectorTasks(), times(3)).add(taskCapture2.capture());
+		//4 tasks added: 
+		//1- on transaction start of transaction manager
+		//2- on transaction end of transaction manager
+		//3- on transaction end of message sender
+		//4- decrease task count
+		verify(application.selectorTasks(), times(4)).add(taskCapture2.capture());
+		
 		taskCapture2.getAllValues().forEach(r -> r.run());
 		verify(sender, times(1)).askForOpenTrades(any(String.class));
 	}

@@ -25,18 +25,18 @@ public class TradeTaskFactory {
 	//	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
 	private final ReconcilerMessageSender reconcilerMessageSender;
 	private final ApplicationInterface application;
-	
+
 	public TradeTaskFactory(ApplicationInterface application, ReconcilerMessageSender reconcilerMessageSender) {
 		this.application = application;
 		this.reconcilerMessageSender = reconcilerMessageSender;
 	}
 
 	TransactionPhaseListener openTradesTransactionCompletionListener = new TransactionPhaseListener() {
-		
+
 		@Override
 		public void onTransactionStart(int transId) {
 		}
-		
+
 		@Override
 		public void onTransactionEnd(int transId) {
 			application.selectorTasks().add(new SelectorTask() {
@@ -47,11 +47,11 @@ public class TradeTaskFactory {
 				}
 			});
 		}
-		
+
 		@Override
 		public void onTaskStart() {
 		}
-		
+
 		@Override
 		public void onTaskEnd() {
 		}
@@ -158,8 +158,9 @@ public class TradeTaskFactory {
 				throw new RuntimeException("Unable to write", e);
 			}
 			finally {
-				if (!toBeContinued) {
-					for (TransactionPhaseListener listener : listeners) {
+				for (TransactionPhaseListener listener : listeners) {
+					listener.onTaskEnd();
+					if (!toBeContinued) {
 						listener.onTransactionEnd(transId);
 					}
 				}
@@ -181,7 +182,7 @@ public class TradeTaskFactory {
 		public String toString() {
 			return "OpenTradeTask [r=" + r + "]";
 		}
-		
+
 	}
 
 	static class SingleTradeTask implements Runnable {
@@ -197,7 +198,7 @@ public class TradeTaskFactory {
 		public String toString() {
 			return "SingleTradeTask [r=" + r + "]";
 		}
-		
+
 	}
 
 	static class FullTask implements Runnable {
@@ -215,7 +216,7 @@ public class TradeTaskFactory {
 		public String toString() {
 			return "FullTask [r=" + r + "]";
 		}
-		
+
 	}
 
 }

@@ -19,7 +19,7 @@ import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTr
 public class TransactionManager implements TransactionPhaseListener {
 
 	private static final Logger LOG = LogManager.getLogger(TransactionManager.class);
-	private volatile int tasksToRun;
+	private int tasksToRun;
 	private final TradeTaskFactory taskFactory;
 	private final LinkedHashMap<Integer, Transaction> transactions = new LinkedHashMap<>();
 	private final ApplicationInterface application;
@@ -125,7 +125,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		@Override
 		public void run() {
 			tasksToRun--;
-			LOG.info("tasksToRun? " + tasksToRun);
+			LOG.info("Decrease: tasksToRun? " + tasksToRun);
 		}
 	};
 
@@ -134,7 +134,7 @@ public class TransactionManager implements TransactionPhaseListener {
 		return transactions.size();
 	}
 
-	public int tasksToRun() {
+	int tasksToRun() {
 		return tasksToRun;
 	}
 
@@ -218,6 +218,7 @@ public class TransactionManager implements TransactionPhaseListener {
 
 			}
 		});
+		LOG.info("Selector tasks in the queue: " + application.selectorTasks().size());
 	}
 
 	@Override
