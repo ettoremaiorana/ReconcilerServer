@@ -5,8 +5,8 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.mockito.Mockito;
 import org.zeromq.ZMQ;
@@ -18,7 +18,7 @@ public class ApplicationMock implements ApplicationInterface {
 
 	private BlockingQueue<SelectorTask> selectorTask = Mockito.mock(BlockingQueue.class);
 	private Deque<Future<?>> futureTasks = new ArrayDeque<>();
-	private ExecutorService executor = Mockito.mock(ExecutorService.class);
+	private ScheduledExecutorService executor = Mockito.mock(ScheduledExecutorService.class);
 	@SuppressWarnings("rawtypes")
 	private final Future DUMMY_FUTURE = Mockito.mock(Future.class);
 	
@@ -33,7 +33,7 @@ public class ApplicationMock implements ApplicationInterface {
 	}
 
 	@Override
-	public ExecutorService executor() {
+	public ScheduledExecutorService executor() {
 		return executor;
 	}
 

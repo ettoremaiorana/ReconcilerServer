@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,16 +23,19 @@ public class TradeTaskFactory {
 	private static final File closed_trades_file = new File(CLOSED_TRADES_FILE_NAME);
 	private static final File open_trades_file = new File(OPEN_TRADES_FILE_NAME);
 	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
-	//	private static final Runnable EMPTY_TASK = new Runnable(){public void run(){}};
 	private final ReconcilerMessageSender reconcilerMessageSender;
 	private final ApplicationInterface application;
 
-	public TradeTaskFactory(ApplicationInterface application, ReconcilerMessageSender reconcilerMessageSender) {
-		this.application = application;
-		this.reconcilerMessageSender = reconcilerMessageSender;
-	}
-
-	TransactionPhaseListener openTradesTransactionCompletionListener = new TransactionPhaseListener() {
+	private final Runnable OPEN_TRADES_REQUEST = new Runnable() {
+		@Override
+		public void run() {
+			LOG.info("Open trades transaction completed, starting a new one");
+			reconcilerMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+		}
+	};
+	
+	private final TransactionPhaseListener openTradesTransactionCompletionListener =
+			new TransactionPhaseListener() {
 
 		@Override
 		public void onTransactionStart(int transId) {
@@ -42,8 +46,7 @@ public class TradeTaskFactory {
 			application.selectorTasks().add(new SelectorTask() {
 				@Override
 				public void run() {
-					LOG.info("Open trades transaction completed, starting a new one");
-					reconcilerMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+					application.executor().schedule(OPEN_TRADES_REQUEST, 5000, TimeUnit.MILLISECONDS);
 				}
 			});
 		}
@@ -56,6 +59,11 @@ public class TradeTaskFactory {
 		public void onTaskEnd() {
 		}
 	};
+	
+	public TradeTaskFactory(ApplicationInterface application, ReconcilerMessageSender reconcilerMessageSender) {
+		this.application = application;
+		this.reconcilerMessageSender = reconcilerMessageSender;
+	}
 
 	public OpenTradeTask newOpenTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
 		LOG.info("TransId " + transId + " -> opens, first? " + first);

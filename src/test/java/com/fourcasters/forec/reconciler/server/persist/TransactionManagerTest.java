@@ -1,9 +1,13 @@
 package com.fourcasters.forec.reconciler.server.persist;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import java.util.concurrent.TimeUnit;
+
 import static org.mockito.Mockito.reset;
 
 import org.junit.Before;
@@ -111,6 +115,10 @@ public class TransactionManagerTest {
 		verify(application.selectorTasks(), times(4)).add(taskCapture2.capture());
 		
 		taskCapture2.getAllValues().forEach(r -> r.run());
+		ArgumentCaptor<Runnable> taskCapture4 = ArgumentCaptor.forClass(Runnable.class);
+		verify(application.executor(), times(1)).schedule(taskCapture4.capture(), eq(5000L), eq(TimeUnit.MILLISECONDS));
+		taskCapture4.getValue().run();//Open trade task
+		
 		verify(sender, times(1)).askForOpenTrades(any(String.class));
 	}
 }
