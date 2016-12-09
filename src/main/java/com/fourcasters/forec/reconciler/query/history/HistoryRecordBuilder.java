@@ -137,7 +137,7 @@ public class HistoryRecordBuilder extends RecordBuilder {
 					+ ", high=" + high + ", low=" + low + "]";
 		}
 		@Override
-		public boolean hasToIndex(Record prev) {
+		public boolean shouldIndex(Record prev) {
 			return sameHour((HistoryRecord)prev);
 		}
 		@Override

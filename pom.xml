@@ -9,7 +9,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>forec</groupId>
-			<artifactId>Indexy</artifactId>
+			<artifactId>indexy</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
