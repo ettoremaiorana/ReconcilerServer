@@ -6,7 +6,11 @@
 package com.fourcasters.forec.reconciler.query.history;
 
 import java.nio.file.Path;
+
 import java.nio.file.Paths;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.query.IndexableDAO;
 import com.fourcasters.forec.reconciler.query.RecordBuilder;
@@ -18,6 +22,8 @@ import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
  * @author ettoremaiorana
  */
 public class HistoryDAO extends IndexableDAO {
+
+	private static final Logger LOG = LogManager.getLogger(HistoryDAO.class);
 
 	@Override
 	public Path getRootPath() {
@@ -41,5 +47,10 @@ public class HistoryDAO extends IndexableDAO {
 	@Override
 	public RecordBuilder getRecordBuilder() {
 		return new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_HISTORY_PATTERN);
+	}
+
+	@Override
+	public void onIndexingEnd(String cross) {
+		LOG.info(cross + " generated an index file of " + hashCount(cross) + " entries");
 	}
 }
