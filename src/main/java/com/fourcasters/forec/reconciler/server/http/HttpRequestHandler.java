@@ -80,6 +80,9 @@ public class HttpRequestHandler {
 			else if (reqUrl.equals("/csvdata")) {
 				new MarketDataServlet(httpParser, historyDao).respond(clientChannel);
 			}
+			else if (reqUrl.equals("/algolog")) {
+				new AlgoLogSenderServlet(httpParser).respond(clientChannel);
+			}
 			else { // requested page not found
 				sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
 			}
