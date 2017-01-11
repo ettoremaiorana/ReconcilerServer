@@ -1,8 +1,7 @@
-package com.fourcasters.forec.reconciler.query.history;
+package com.fourcasters.forec.reconciler.query.marketdata;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -13,12 +12,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.fourcasters.forec.reconciler.query.history.HistoryRecordBuilder.HistoryRecord;
+import com.fourcasters.forec.reconciler.query.marketdata.HistoryRecordBuilder.HistoryRecord;
 
 public class HistoryDAOTest {
 
@@ -30,7 +29,7 @@ public class HistoryDAOTest {
 		oldProp = System.getProperty("ENV");
 		System.setProperty("ENV", "test");
 		dao = new HistoryDAO();
-		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		dao.createIndex("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
 	}
 
 	private String pattern;
@@ -42,8 +41,8 @@ public class HistoryDAOTest {
 		sdf = new SimpleDateFormat(pattern);
 	}
 
-	@After
-	public void after() {
+	@AfterClass
+	public static void afterAll() {
 		if (oldProp != null) {
 			System.setProperty("ENV", oldProp);
 		}
@@ -54,8 +53,8 @@ public class HistoryDAOTest {
 
 
 	@Test
-	public void testHashCount() throws IOException {
-		assertEquals(-1, dao.hashCount("gbpjpy"));
+	public void testindexSize() throws IOException {
+		assertEquals(-1, dao.indexSize("gbpjpy"));
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		HistoryRecordBuilder builder = new HistoryRecordBuilder("yyyy.mm.dd,HH:MM,o,h,l,c,v");
 		String record;
@@ -67,23 +66,23 @@ public class HistoryDAOTest {
 			}
 		}
 		file.close();
-		assertEquals(counter, dao.hashCount("eurusd"));
+		assertEquals(counter, dao.indexSize("eurusd"));
 	}
 
 	@Test
 	public void testOutOfBoundariesRecord() throws IOException, ParseException {
 		Date d = sdf.parse("2014.12.21,00:00");
-		long offset = dao.offset("eurusd", d, false);
+		long offset = dao.offset("eurusd", d);
 		assertEquals(-1, offset);
 		d = sdf.parse("2017.12.21,00:00");
-		offset = dao.offset("eurusd", d, false);
+		offset = dao.offset("eurusd", d);
 		assertEquals(-1, offset);
 	}
 	
 	@Test
 	public void testOffsetAt10thRecord() throws IOException, ParseException {
 		Date d = sdf.parse("2015.12.21,00:09");
-		long offset = dao.offset("eurusd", d, false);
+		long offset = dao.offset("eurusd", d);
 		assertEquals(45*7+44*2, offset);
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		file.seek(offset);
@@ -95,7 +94,7 @@ public class HistoryDAOTest {
 	@Test
 	public void testOffsetAt0() throws IOException, ParseException {
 		Date d = sdf.parse("2015.12.21,00:00");
-		long offset = dao.offset("eurusd", d, false);
+		long offset = dao.offset("eurusd", d);
 		assertEquals(0, offset);
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		file.seek(offset);
@@ -107,7 +106,7 @@ public class HistoryDAOTest {
 	@Test
 	public void testOffsetExactOf0() throws IOException, ParseException {
 		Date d = sdf.parse("2015.12.21,00:00");
-		long offset = dao.offset("eurusd", d, true);
+		long offset = dao.offsetPlusOne("eurusd", d);
 		assertEquals(45, offset);
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		file.seek(offset);
@@ -119,7 +118,7 @@ public class HistoryDAOTest {
 	@Test
 	public void testOffsetExactOf10thRecord() throws IOException, ParseException {
 		Date d = sdf.parse("2015.12.21,00:09");
-		long offset = dao.offset("eurusd", d, true);
+		long offset = dao.offsetPlusOne("eurusd", d);
 		assertEquals(45*8+44*2, offset);
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		file.seek(offset);
@@ -131,7 +130,7 @@ public class HistoryDAOTest {
 	@Test
 	public void testWeekendJump() throws ParseException, IOException {
 		Date d = sdf.parse("2015.12.24,23:00");
-		long offset = dao.offset("eurusd", d, false);
+		long offset = dao.offset("eurusd", d);
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
 		file.seek(offset);
 		String line = file.readLine();
@@ -142,9 +141,9 @@ public class HistoryDAOTest {
 	@Test
 	public void testRange() throws ParseException, IOException {
 		Date d = sdf.parse("2015.12.21,00:19");
-		long end = dao.offset("eurusd", d, true);
+		long end = dao.offsetPlusOne("eurusd", d);
 		d = sdf.parse("2015.12.21,00:10");
-		long start = dao.offset("eurusd", d, false);
+		long start = dao.offset("eurusd", d);
 		byte[] buffer = new byte[(int) (end-start)];
 		
 		RandomAccessFile file = new RandomAccessFile("./history/test/eurusd.csv", "r");
@@ -167,9 +166,9 @@ public class HistoryDAOTest {
 	}
 	@Test
 	public void testHashAll() throws IOException {
-		dao.dbhashAll("yyyy.mm.dd,HH:MM,o,h,l,c,v");
-		assertTrue(dao.hashCount("audcad") > 0);
-		assertTrue(dao.hashCount("eurusd") > 0);
+		dao.createIndexAll("yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		assertTrue(dao.indexSize("audcad") > 0);
+		assertTrue(dao.indexSize("eurusd") > 0);
 
 	}
 }

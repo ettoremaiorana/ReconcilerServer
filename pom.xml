@@ -13,11 +13,19 @@
 		</repository>
 	</repositories>
 	<dependencies>
+
 		<dependency>
 			<groupId>com.github.ettoremaiorana</groupId>
 			<artifactId>Indexy</artifactId>
-			<version>alpha0.0.1</version>
+			<version>alpha0.0.2</version>
 		</dependency>
+		<!--
+		<dependency>
+			<groupId>forec</groupId>
+			<artifactId>indexy</artifactId>
+			<version>0.0.2-SNAPSHOT</version>
+		</dependency>
+			 -->
 		<dependency>
 			<groupId>org.zeromq</groupId>
 			<artifactId>jeromq</artifactId>

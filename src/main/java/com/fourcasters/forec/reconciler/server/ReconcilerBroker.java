@@ -33,7 +33,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
-import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
+import com.fourcasters.forec.reconciler.query.marketdata.HistoryDAO;
 import com.fourcasters.forec.reconciler.server.http.HttpParser;
 import com.fourcasters.forec.reconciler.server.http.HttpRequestHandler;
 public class ReconcilerBroker {
@@ -85,8 +85,8 @@ public class ReconcilerBroker {
 		final HistoryDAO dao = new HistoryDAO();
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
-		dao.dbhashAll();
-		application.executor().schedule(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 300L, TimeUnit.SECONDS);
+		dao.createIndexAll();
+		application.executor().scheduleAtFixedRate(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
 
 		running = true;
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());

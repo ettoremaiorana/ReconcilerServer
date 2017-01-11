@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.query.history;
+package com.fourcasters.forec.reconciler.query.marketdata;
 
 public class HistoryRecordParsingException extends RuntimeException {
 

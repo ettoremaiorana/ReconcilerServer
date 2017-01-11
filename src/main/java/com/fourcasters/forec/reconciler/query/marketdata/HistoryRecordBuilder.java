@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.query.history;
+package com.fourcasters.forec.reconciler.query.marketdata;
 
 import java.util.GregorianCalendar;
 import java.util.function.BiConsumer;
@@ -138,7 +138,7 @@ public class HistoryRecordBuilder extends RecordBuilder {
 		}
 		@Override
 		public boolean shouldIndex(Record prev) {
-			return sameHour((HistoryRecord)prev);
+			return !sameHour((HistoryRecord)prev);
 		}
 		@Override
 		public Long index() {

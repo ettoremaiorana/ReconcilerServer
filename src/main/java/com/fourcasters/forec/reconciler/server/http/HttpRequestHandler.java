@@ -21,7 +21,7 @@ import java.util.Arrays;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
+import com.fourcasters.forec.reconciler.query.marketdata.HistoryDAO;
 import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
 import com.fourcasters.forec.reconciler.server.StrategiesTracker;
 
@@ -33,7 +33,7 @@ public class HttpRequestHandler {
 
 	public HttpRequestHandler(StrategiesTracker strategiesTracker, HistoryDAO historyDao) {
 		this.strategiesTracker = strategiesTracker;
-		LOG.debug(ReconcilerConfig.BKT_DATA_PATH);
+		LOG.debug(ReconcilerConfig.MD_DATA_PATH);
 		this.historyDao = historyDao;
 	}
 
@@ -54,7 +54,7 @@ public class HttpRequestHandler {
 				sendFile(clientChannel, RESPONSE_OK_HEADER, OPEN_TRADES_FILE_NAME);
 			}
 			else if (reqUrl.equals("/performance")) {
-				LOG.info("Performace file requested");
+				LOG.info("Performance file requested");
 				if(!httpParser.getMethod().equals("GET")) {
 					LOG.error("Method must be GET");
 					sendFile(clientChannel, WRONG_METHOD_HEADER, WRONG_METHOD_FILE_NAME);
@@ -78,7 +78,7 @@ public class HttpRequestHandler {
 				}
 			}
 			else if (reqUrl.equals("/csvdata")) {
-				new HistoryServlet(httpParser, historyDao).respond(clientChannel);
+				new MarketDataServlet(httpParser, historyDao).respond(clientChannel);
 			}
 			else { // requested page not found
 				sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);

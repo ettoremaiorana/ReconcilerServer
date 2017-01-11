@@ -1,6 +1,6 @@
 package com.fourcasters.forec.reconciler.server.http;
 
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.BKT_DATA_EXTENSION;
+import static com.fourcasters.forec.reconciler.server.ProtocolConstants.MD_DATA_EXTENSION;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RESPONSE_OK_HEADER_JSON;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NOT_FOUND_FILE_NAME;
@@ -18,16 +18,16 @@ import java.util.Date;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
+import com.fourcasters.forec.reconciler.query.marketdata.HistoryDAO;
 import com.fourcasters.forec.reconciler.server.ReconcilerConfig;
 
-public class HistoryServlet extends AbstractServlet {
+public class MarketDataServlet extends AbstractServlet {
 
-	private static final Logger LOG = LogManager.getLogger(HistoryServlet.class);
+	private static final Logger LOG = LogManager.getLogger(MarketDataServlet.class);
 	private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmm");
 	private final HistoryDAO historyDao;
 
-	HistoryServlet(HttpParser httpParser, HistoryDAO dao) {
+	MarketDataServlet(HttpParser httpParser, HistoryDAO dao) {
 		super(httpParser);
 		this.historyDao = dao;
 	}
@@ -37,7 +37,7 @@ public class HistoryServlet extends AbstractServlet {
 		if (validate(clientChannel)) {
 
 			final String cross = httpParser.getParam("cross").toLowerCase();
-			final Path path = Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + BKT_DATA_EXTENSION);
+			final Path path = Paths.get(ReconcilerConfig.MD_DATA_PATH, cross + MD_DATA_EXTENSION);
 			LOG.debug("Path to history: " + path);
 			if (!Files.exists(path)) {
 				LOG.error("Cross " + cross +" has not been found");
@@ -50,8 +50,8 @@ public class HistoryServlet extends AbstractServlet {
 				Date to = sdf.parse(httpParser.getParam("to"));
 				LOG.debug("from: " + from);
 				LOG.debug("to: " + to);
-				long start = historyDao.offset(cross, from, false);
-				long end = historyDao.offset(cross, to, true);
+				long start = historyDao.offset(cross, from);
+				long end = historyDao.offsetPlusOne(cross, to);
 				String responseFormat = httpParser.getParam("format");
 				if (responseFormat != null && responseFormat.equals("json")) {
 					transfered = sendJson(clientChannel, RESPONSE_OK_HEADER_JSON, path, start, end);

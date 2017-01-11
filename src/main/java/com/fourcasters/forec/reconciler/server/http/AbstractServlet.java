@@ -38,7 +38,9 @@ abstract class AbstractServlet {
 		final String value = httpParser.getParam(parameter);
 		if (value == null) {
 			LOG.error(errorMessage);
-			sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+			if (clientChannel != null) {
+				sendFile(clientChannel, NOT_FOUND_HEADER, NOT_FOUND_FILE_NAME);
+			}
 			return false;
 		}
 		return true;
@@ -135,7 +137,9 @@ abstract class AbstractServlet {
 	boolean validateMethod(HttpParser httpParser, SocketChannel clientChannel, String param, String errorMessage) throws IOException {
 		if(!httpParser.getMethod().equals(param)) {
 			LOG.error(errorMessage);
-			sendFile(clientChannel, WRONG_METHOD_HEADER, WRONG_METHOD_FILE_NAME);
+			if (clientChannel != null) {
+				sendFile(clientChannel, WRONG_METHOD_HEADER, WRONG_METHOD_FILE_NAME);
+			}
 			return false;
 		}
 		return true;

@@ -25,10 +25,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.fourcasters.forec.reconciler.query.history.HistoryDAO;
+import com.fourcasters.forec.reconciler.query.marketdata.HistoryDAO;
 
 @RunWith(MockitoJUnitRunner.class)
-public class HistoryServletTest {
+public class MarketDataServletTest {
 
 	@Mock HttpParser parser;
 	private static SocketChannel channel;
@@ -44,7 +44,7 @@ public class HistoryServletTest {
 		oldProp = System.getProperty("ENV");
 		System.setProperty("ENV", "test");
 		dao = new HistoryDAO();
-		dao.dbhash("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
+		dao.createIndex("eurusd", "yyyy.mm.dd,HH:MM,o,h,l,c,v");
 		server = ServerSocketChannel.open();
 		server.configureBlocking(true);
 		server.socket().bind(new InetSocketAddress("localhost", 54345));
@@ -97,13 +97,13 @@ public class HistoryServletTest {
 
 	@Test
 	public void test() throws IOException, ParseException {
-		long result = new HistoryServlet(parser, dao).respond(channel);
+		long result = new MarketDataServlet(parser, dao).respond(channel);
 		String pattern = "yyyy.MM.dd,HH:mm";
 		SimpleDateFormat sdf = new SimpleDateFormat(pattern);
 		Date d = sdf.parse("2015.12.23,13:21");
-		long start = dao.offset("eurusd", d, false);
+		long start = dao.offset("eurusd", d);
 		d = sdf.parse("2015.12.23,13:31");
-		long stop = dao.offset("eurusd", d, true);
+		long stop = dao.offsetPlusOne("eurusd", d);
 		assertEquals(stop-start, result);
 	}
 
@@ -130,7 +130,7 @@ public class HistoryServletTest {
 			}
 		}, "Read-me");
 		t.start();
-		new HistoryServlet(parser, dao).respond(client.getChannel());
+		new MarketDataServlet(parser, dao).respond(client.getChannel());
 		latch.await(10000, TimeUnit.MILLISECONDS);
 		bb.flip();
 		bb.get(buff,0,bb.limit());

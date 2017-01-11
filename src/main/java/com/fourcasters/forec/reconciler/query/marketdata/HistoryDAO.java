@@ -3,11 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.fourcasters.forec.reconciler.query.history;
+package com.fourcasters.forec.reconciler.query.marketdata;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 import java.nio.file.Paths;
+import java.util.Date;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,19 +27,22 @@ public class HistoryDAO extends IndexableDAO {
 
 	private static final Logger LOG = LogManager.getLogger(HistoryDAO.class);
 
-	@Override
-	public Path getRootPath() {
-		return Paths.get(ReconcilerConfig.BKT_DATA_PATH);
+	public long offset(String cross, Date date) throws IOException {
+		return offset(cross, date.getTime(), projectFirst);
 	}
-	
-	@Override
-	public String getDefaultFormat() {
-		return ReconcilerConfig.DEFAULT_HISTORY_PATTERN;
+
+	public long offsetPlusOne(String cross, Date date) throws IOException {
+		return offset(cross, date.getTime(), sum);
 	}
 
 	@Override
+	public Path getRootPath() {
+		return Paths.get(ReconcilerConfig.MD_DATA_PATH);
+	}
+	
+	@Override
 	public Path getFilePath(String cross) {
-		return Paths.get(ReconcilerConfig.BKT_DATA_PATH, cross + ProtocolConstants.BKT_DATA_EXTENSION);
+		return Paths.get(ReconcilerConfig.MD_DATA_PATH, cross + ProtocolConstants.MD_DATA_EXTENSION);
 	}
 	@Override
 	public RecordBuilder getRecordBuilder(String recordFormat) {
@@ -46,11 +51,11 @@ public class HistoryDAO extends IndexableDAO {
 
 	@Override
 	public RecordBuilder getRecordBuilder() {
-		return new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_HISTORY_PATTERN);
+		return new HistoryRecordBuilder(ReconcilerConfig.DEFAULT_MD_PATTERN);
 	}
 
 	@Override
 	public void onIndexingEnd(String cross) {
-		LOG.info(cross + " generated an index file of " + hashCount(cross) + " entries");
+		LOG.info(cross + " generated an index file of " + indexSize(cross) + " entries");
 	}
 }

@@ -8,15 +8,23 @@ import java.util.Properties;
 
 public class ReconcilerConfig {
 
-	private enum ENV {
+
+    private enum ENV {
 		prod,
 		demo,
 		dev,
 		test
 	}
 
-	public static final String BKT_DATA_PATH;
-	public static final String DEFAULT_HISTORY_PATTERN;
+    public static final String ALGO_PATH;
+
+	//market data
+	public static final String MD_DATA_PATH;
+	public static final String DEFAULT_MD_PATTERN;
+
+	//trades
+	public static final String TRADES_DATA_PATH;
+	public static final String DEFAULT_TRADE_PATTERN;
 
 	static {
 		Properties p = new Properties();
@@ -34,12 +42,22 @@ public class ReconcilerConfig {
 			if (env == null) {
 				throw new IllegalStateException("ENV is not defined, please specify one of the following: " + Arrays.toString(ENV.values()));
 			}
-			BKT_DATA_PATH = p.getProperty("bkt.data.path."+env);
-			if (BKT_DATA_PATH == null) {
+			MD_DATA_PATH = p.getProperty("md.data.path."+env);
+			if (MD_DATA_PATH == null) {
 				throw new IllegalStateException("Unspecified bkt data path for env " + env.toString());
 			}
-			DEFAULT_HISTORY_PATTERN = p.getProperty("bkt.data.format", "o,h,l,c,v\u0020dd/mm/yyyy\u0020HH:MM");
-			
+			DEFAULT_MD_PATTERN = p.getProperty("md.data.format", "o,h,l,c,v\u0020dd/mm/yyyy\u0020HH:MM");
+
+			TRADES_DATA_PATH = p.getProperty("trades.data.path."+env);
+			if (TRADES_DATA_PATH == null) {
+				throw new IllegalStateException("Unspecified trades data path for env " + env.toString());
+			}
+			DEFAULT_TRADE_PATTERN = p.getProperty("md.data.format", "o,h,l,c,v\u0020dd/mm/yyyy\u0020HH:MM");
+
+			ALGO_PATH = p.getProperty("algo.path."+env);
+			if (ALGO_PATH == null) {
+				throw new IllegalStateException("Unspecified algo path");
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

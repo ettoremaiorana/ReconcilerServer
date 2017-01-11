@@ -11,7 +11,8 @@ public class ProtocolConstants {
 	public static final String WRONG_METHOD_FILE_NAME = "method_error.html";
 	public static final String NOT_FOUND_FILE_NAME = "not_found.html";
 	public static final String PERFORMANCE_FILE_NAME = "_performance.csv";
-	public static final String BKT_DATA_EXTENSION = ".csv";
+	public static final String MD_DATA_EXTENSION = ".csv";
+	public static final String TRADES_DATA_EXTENSION = ".csv";
 	
 	public static final byte[] RESPONSE_OK_HEADER = "HTTP/1.2 200 OK\nContent-Type: text/csv; charset=UTF-8\n\r\n".getBytes(CHARSET);
 	public static final byte[] RESPONSE_OK_HEADER_JSON = "HTTP/1.2 200 OK\nContent-Type: application/json; charset=UTF-8\n\r\n".getBytes(CHARSET);

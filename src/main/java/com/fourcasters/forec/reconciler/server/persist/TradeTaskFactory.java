@@ -100,7 +100,7 @@ public class TradeTaskFactory {
 					if (!trades[i].trim().equals("")) {
 						pw.write(trades[i].getBytes(CHARSET));
 					}
-					pw.write(",\n".getBytes(CHARSET));
+					pw.write("\n".getBytes(CHARSET));
 				}
 				pw.write(trades[trades.length - 1].getBytes(CHARSET));
 				pw.flush();
@@ -157,7 +157,7 @@ public class TradeTaskFactory {
 					if (!trades[i].trim().equals("")) {
 						pw.write(trades[i].getBytes(CHARSET));
 					}
-					pw.write(",\n".getBytes(CHARSET));
+					pw.write("\n".getBytes(CHARSET));
 				}
 				pw.write(trades[trades.length - 1].getBytes(CHARSET));
 				pw.flush();
