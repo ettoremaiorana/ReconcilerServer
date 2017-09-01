@@ -4,6 +4,10 @@ import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
+
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
 public class ReconcilerMessageSender {
 
@@ -31,4 +35,26 @@ public class ReconcilerMessageSender {
 		socket.send(newTopic.getBytes(CHARSET), ZMQ.SNDMORE);
 		return socket.send(OPEN_IN_BYTES, 0);
 	}
+
+	public boolean askForMarketData(long from, long to, String cross) {
+        String start = dateFormat(from);
+        String end = dateFormat(to);
+        String message = "cross=" + cross + ";start=" + start +";end=" + end;
+        String topic = "";
+        LOG.info("Sending '" + message + "' on topic " + topic);
+        return socket.send(message.getBytes(CHARSET), 0);
+
+    }
+
+    private String dateFormat(long from) {
+        GregorianCalendar gc =new GregorianCalendar();
+        gc.setTimeInMillis(from);
+        StringBuilder sb = new StringBuilder();
+        sb.append(gc.get(Calendar.YEAR));
+        sb.append('.');
+        sb.append(gc.get(Calendar.MONTH));
+        sb.append('.');
+        sb.append(gc.get(Calendar.DAY_OF_MONTH));
+        return sb.toString();
+    }
 }

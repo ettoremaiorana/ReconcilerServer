@@ -2,6 +2,7 @@ package com.fourcasters.forec.reconciler.server;
 
 import java.util.concurrent.Future;
 
+import com.fourcasters.forec.reconciler.EmailSender;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.Email;
 import org.apache.commons.mail.EmailException;
@@ -13,18 +14,20 @@ import com.fourcasters.forec.reconciler.server.PerformanceCalc.PerformanceCalcTa
 
 public class TradeEventCapturer implements MessageHandler {
 
-	private final static String PASSWORD = System.getProperty("mail.password");
 	private final static Logger LOG = LogManager.getLogger(TradeEventCapturer.class);
 
 	private final ApplicationInterface application;
 	private final ReconcilerMessageSender messageSender;
 	private final StrategiesTracker strategiesTracker;
+	private final EmailSender emailSender;
 
 
-	public TradeEventCapturer(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender, StrategiesTracker strategiesTracker) {
+	public TradeEventCapturer(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender,
+                              StrategiesTracker strategiesTracker, EmailSender emailSender) {
 		this.application = application;
 		this.messageSender = reconcMessageSender;
 		this.strategiesTracker = strategiesTracker;
+		this.emailSender = emailSender;
 	}
 
 	@Override
@@ -41,7 +44,7 @@ public class TradeEventCapturer implements MessageHandler {
 
 			final Future<?> closedTradesfuture = application.executor().submit(
 					() -> {
-						sendEmail(algoId, ticket, data);
+						emailSender.sendEmail(algoId, ticket, data);
 						final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
 						LOG.info("closedTradesFuture result = " + result);
 					}
@@ -62,30 +65,6 @@ public class TradeEventCapturer implements MessageHandler {
 			final Future<?> strategiesCaptureFuture = application.executor().submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
 			application.futureTasks().add(strategiesCaptureFuture);
 
-		}
-
-	}
-
-	private void sendEmail(int algoId, long ticket, String data) {
-		try {
-			Email email = new SimpleEmail();
-			email.setHostName("smtp.gmail.com");
-			email.setSmtpPort(465);
-			email.setAuthenticator(new DefaultAuthenticator("ivan.valeriani", PASSWORD));
-			email.setSSL(true);
-			email.setFrom("ivan.valeriani@gmail.com");
-			email.setSubject("Automatic trading");
-			email.setMsg(new StringBuffer().append(algoId).append(": ").append(data).toString());
-			email.addTo("push_it-30@googlegroups.com");
-			email.addTo("phd.alessandro.ricci@gmail.com");
-			email.addTo("cwicwi2@gmail.com");
-			email.addTo("simone.allemanini@gmail.com");
-			email.addTo("ivan.valeriani@gmail.com");
-			email.send();
-		}
-		catch (EmailException e) {
-			LOG.error("Unable to send email.", e);
-			e.printStackTrace();
 		}
 	}
 }

@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
+import com.fourcasters.forec.reconciler.EmailSender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
@@ -84,7 +85,9 @@ public class ReconcilerBroker {
 		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
 		final HistoryDAO dao = new HistoryDAO();
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
-		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker);
+		final EmailSender emailSender = new EmailSender();
+		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender,
+				strategiesTracker, emailSender);
 		dao.createIndexAll();
 		application.executor().scheduleAtFixedRate(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
 

@@ -3,9 +3,13 @@ package com.fourcasters.forec.reconciler.server.persist;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.MessageHandler;
+import com.fourcasters.forec.reconciler.server.ReconcilerBroker;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class TradePersister implements MessageHandler {
 
+    private static final Logger LOG = LogManager.getLogger(TradePersister.class);
 	private final TransactionManager transactionManager;
 
 	public TradePersister(TransactionManager transactionManager, ApplicationInterface application) {
@@ -27,13 +31,13 @@ public class TradePersister implements MessageHandler {
 		else if (mode == TransactionMode.OPEN) {
 			transactionManager.onOpenTransaction(transId, tradesInMessage);
 		}
-		else {
+		else if (mode == TransactionMode.FULL) {
 			transactionManager.onFullTransaction(transId, tradesInMessage);
 		}
 	}
 
 
-	static enum TransactionMode {
+	enum TransactionMode {
 		SINGLE,
 		OPEN,
 		FULL

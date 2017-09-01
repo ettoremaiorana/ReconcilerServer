@@ -1,5 +1,6 @@
 package com.fourcasters.forec.reconciler.server;
 
+import com.fourcasters.forec.reconciler.EmailSender;
 import com.fourcasters.forec.reconciler.server.mt4.Mt4HandlerFactory;
 import com.fourcasters.forec.reconciler.server.persist.TradePersister;
 import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory;
@@ -14,10 +15,11 @@ public class MessageHandlerFactory {
 	private final Mt4HandlerFactory mt4HandlerFactory;
 	private final Identity identity;
 
-	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender, StrategiesTracker strategiesTracker) {
+	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender,
+								 StrategiesTracker strategiesTracker, EmailSender emailSender) {
 		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application, reconcMessageSender), application), application);
 		forwarder = Forwarder.create(application);
-		tradeAppender = new TradeEventCapturer(application, reconcMessageSender, strategiesTracker);
+		tradeAppender = new TradeEventCapturer(application, reconcMessageSender, strategiesTracker, emailSender);
 		logger = new Logger();
 		mt4HandlerFactory = new Mt4HandlerFactory();
 		identity = new Identity();

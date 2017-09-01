@@ -5,6 +5,7 @@ import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.fourcasters.forec.reconciler.EmailSender;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,11 +22,12 @@ public class TradeEventCapturerTest {
 	private ApplicationMock application;
 	@Mock private ReconcilerMessageSender sender;
 	@Mock private StrategiesTracker strTracker;
+	@Mock private EmailSender emailSender;
 
 	@Before
 	public void setup() {
 		application = new ApplicationMock();
-		capture = new TradeEventCapturer(application, sender, strTracker);
+		capture = new TradeEventCapturer(application, sender, strTracker, emailSender);
 	}
 
 	@Test
