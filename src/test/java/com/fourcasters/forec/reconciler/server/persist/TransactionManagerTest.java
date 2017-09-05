@@ -6,9 +6,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
-import static org.mockito.Mockito.reset;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -18,9 +18,8 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
-import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.ReconcilerMessageSender;
-import com.fourcasters.forec.reconciler.server.SelectorTask;
+
 @RunWith(MockitoJUnitRunner.class)
 public class TransactionManagerTest {
 
@@ -29,7 +28,7 @@ public class TransactionManagerTest {
 //	private String fullDataRequiringMore = "67890=FULL=z,z,z,z,z,z||y,y,y,y,y,y||more";
 
 	@Mock private ReconcilerMessageSender sender;
-	private ApplicationInterface application = new ApplicationMock();
+	private ApplicationMock application = new ApplicationMock();
 	private TransactionManager transactionManager;
 	private TradeTaskFactory taskFactory;
 	
@@ -55,13 +54,13 @@ public class TransactionManagerTest {
 	@Test
 	public void onNewTaskPollingRequestIsEnqueued() {
 		transactionManager.onFullTransaction(67890, "z,z,z,z,z,z||y,y,y,y,y,y||more");
-		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class));
+		assertEquals(1, application.taskSize());
 		transactionManager.onFullTransaction(67890, "a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x");
-		verify(application.selectorTasks(), times(2)).add(any(SelectorTask.class));
+		assertEquals(2, application.taskSize());
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
-		verify(application.selectorTasks(), times(3)).add(any(SelectorTask.class));
+		assertEquals(3, application.taskSize());
 		transactionManager.onSingleTransaction(12345, "a,b,c,d,e,f");
-		verify(application.selectorTasks(), times(4)).add(any(SelectorTask.class));
+		assertEquals(4, application.taskSize());
 	}
 
 
@@ -80,7 +79,7 @@ public class TransactionManagerTest {
 		transactionManager.onSingleTransaction(12345, "a,b,c,d,e,f");
 		assertEquals(1, transactionManager.numberOfTransactions()); //one task
 		assertEquals(1, transactionManager.tasksToRun()); //one task
-		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class)); //decrease tasksToRun
+		assertEquals(1, application.taskSize());
 	}
 
 	@Test
@@ -88,37 +87,31 @@ public class TransactionManagerTest {
 		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
 		assertEquals(1, transactionManager.numberOfTransactions()); //one task
 		assertEquals(1, transactionManager.tasksToRun()); //one task
-		verify(application.selectorTasks(), times(1)).add(any(SelectorTask.class));//decrease tasksToRun
+		assertEquals(1, application.taskSize());
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
 	public void onClosedOpenTaskTransactionNewOpenRequestIsIssued() {
-		transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
-		ArgumentCaptor<SelectorTask> taskCapture = ArgumentCaptor.forClass(SelectorTask.class);
-		verify(application.selectorTasks(), times(1)).add(taskCapture.capture());
-		reset(application.selectorTasks());
-		
-		taskCapture.getValue().run(); //Polling task
-		ArgumentCaptor<Runnable> taskCapture1 = ArgumentCaptor.forClass(Runnable.class);
-		verify(application.executor(), times(1)).submit(taskCapture1.capture());
-		reset(application.executor());
 
-		taskCapture1.getValue().run();//Open trade task
+	    transactionManager.onOpenTransaction(54321, "f,e,d,c,b,a");
+		assertEquals(1, application.taskSize());
+        application.select();
+
+        application.hadExactlySubmittedEvents(new ArrayList<>(Arrays.asList(Runnable.class)));
+
 		verify(sender, never()).askForOpenTrades(any(String.class));
-		ArgumentCaptor<SelectorTask> taskCapture2 = ArgumentCaptor.forClass(SelectorTask.class);
-		//4 tasks added: 
+		//4 tasks added:
 		//1- on transaction start of transaction manager
 		//2- on transaction end of transaction manager
 		//3- on transaction end of message sender
 		//4- decrease task count
-		verify(application.selectorTasks(), times(4)).add(taskCapture2.capture());
-		
-		taskCapture2.getAllValues().forEach(r -> r.run());
-		ArgumentCaptor<Runnable> taskCapture4 = ArgumentCaptor.forClass(Runnable.class);
-		verify(application.executor(), times(1)).schedule(taskCapture4.capture(), eq(5000L), eq(TimeUnit.MILLISECONDS));
-		taskCapture4.getValue().run();//Open trade task
-		
+        application.execute();
+		assertEquals(4, application.select());
+
+		application.hadExactlyScheduledEvents(new ArrayList<>(Arrays.asList(Runnable.class)));
+		application.executeScheduled();
+
 		verify(sender, times(1)).askForOpenTrades(any(String.class));
 	}
 }

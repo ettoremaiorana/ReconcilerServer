@@ -1,17 +1,17 @@
 package com.fourcasters.forec.reconciler.server;
 
 import java.util.Deque;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.*;
 
 import org.zeromq.ZMQ.Context;
 
 public interface ApplicationInterface {
 
 	Context context();
-	ScheduledExecutorService executor();
 	Deque<Future<?>> futureTasks();
-	BlockingQueue<SelectorTask> selectorTasks();
-	
+    int select();
+    boolean enqueue(SelectorTask task);
+	ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long delay, long period, TimeUnit tu);
+    boolean submit(Runnable r);
+	int taskSize();
 }

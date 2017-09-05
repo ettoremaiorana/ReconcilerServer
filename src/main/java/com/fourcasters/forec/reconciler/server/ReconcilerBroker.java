@@ -19,10 +19,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.Deque;
 import java.util.Iterator;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -55,22 +52,19 @@ public class ReconcilerBroker {
 
 
 	public static void main(String[] args) throws InterruptedException {
-		t = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					new ReconcilerBroker().run();
-				} catch (IOException | URISyntaxException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}, "Event-loop-thread");
+		t = new Thread(() -> {
+            try {
+                new ReconcilerBroker().run();
+            } catch (IOException | URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }, "Event-loop-thread");
 		t.setDaemon(true);
 		t.start();
 		t.join();
 	}
 
-	final void run() throws IOException, UnsupportedEncodingException, URISyntaxException {
+	final void run() throws IOException, URISyntaxException {
 		if ("stop".equals(System.getProperty("debug"))) {
 			LOG.info("Write anything and then press enter to let the program start");
 			new BufferedReader(new InputStreamReader(System.in, StandardCharsets.US_ASCII)).readLine();
@@ -89,7 +83,7 @@ public class ReconcilerBroker {
 		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender,
 				strategiesTracker, emailSender);
 		dao.createIndexAll();
-		application.executor().scheduleAtFixedRate(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
+		application.scheduleAtFixedRate(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
 
 		running = true;
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
@@ -98,8 +92,7 @@ public class ReconcilerBroker {
 			zmqEventHandling(zmqMsgsHandlers, server, newTradesListener);
 			httpEventHandling(s, httpServer, httpReqHandler);
 
-			tasksProcessing();
-			selectorTaskProcessing();
+			application.select();
 			//TODO Back off strategy
 			LockSupport.parkNanos(1_000_000L); //bleah
 		}
@@ -109,76 +102,41 @@ public class ReconcilerBroker {
 		ctx.close();
 	}
 
-	private static void selectorTaskProcessing() {
-		SelectorTask task;
-		final int size = application.selectorTasks().size() * 2;
-		int inc = 0;
-		while (inc < size && (task = application.selectorTasks().poll()) != null) {
-			task.run();
-			inc++; //this is to avoid task to enqueue itself, so ending in an infinite loop.
-		}
-	}
-
-	private static void tasksProcessing() {
-		Deque<Future<?>> tasks = application.futureTasks();
-		if (tasks.size() > 0) {
-			tasks.removeIf(
-					f -> {
-						return f.isDone() && logIfException(f);
-					});
-		}
-	}
-
-	private static boolean logIfException(Future<?> f) {
-		try {
-			f.get();
-			LOG.info(f + " future has finished");
-		} catch (InterruptedException | ExecutionException e) {
-			LOG.error("Computation error", e);
-		}
-		return true;
-	}
-
 	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer, HttpRequestHandler httpReqHandler) throws IOException {
 		if (s.selectNow() > 0) {
-			final Future<?> f = application.executor().submit(new Runnable() {
-
-				@Override
-				public void run() {
-					BufferedReader httpReader = null;
-					java.net.Socket client = null;
-					try {
-						LOG.info("Request received");
-						Iterator<SelectionKey> it = s.selectedKeys().iterator();
-						while (it.hasNext()) {
-							it.next();
-							it.remove();
-							if (!key.isValid()) {
-								key = httpServer.register(s, SelectionKey.OP_ACCEPT);
-							} else {
-								final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
-								client = clientChannel.socket();
-								client.setSendBufferSize(2048);
-								client.setSoTimeout(3000);
-								httpReader = new BufferedReader(new InputStreamReader(client.getInputStream(), CHARSET));
-								final HttpParser httpParser = new HttpParser(httpReader);
-								httpReqHandler.respond(clientChannel, httpParser);
-							}
-						}
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-					finally {
-						try {
-							if (httpReader != null) httpReader.close();
-							if (client != null) client.close();
-						} catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-					}
-				}
-			});
-			application.futureTasks().add(f);
+			application.submit(() -> {
+                BufferedReader httpReader = null;
+                java.net.Socket client = null;
+                try {
+                    LOG.info("Request received");
+                    Iterator<SelectionKey> it = s.selectedKeys().iterator();
+                    while (it.hasNext()) {
+                        it.next();
+                        it.remove();
+                        if (!key.isValid()) {
+                            key = httpServer.register(s, SelectionKey.OP_ACCEPT);
+                        } else {
+                            final SocketChannel clientChannel = ((ServerSocketChannel)key.channel()).accept();
+                            client = clientChannel.socket();
+                            client.setSendBufferSize(2048);
+                            client.setSoTimeout(3000);
+                            httpReader = new BufferedReader(new InputStreamReader(client.getInputStream(), CHARSET));
+                            final HttpParser httpParser = new HttpParser(httpReader);
+                            httpReqHandler.respond(clientChannel, httpParser);
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                finally {
+                    try {
+                        if (httpReader != null) httpReader.close();
+                        if (client != null) client.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
 		}
 	}
 
@@ -268,21 +226,12 @@ public class ReconcilerBroker {
 		return recvDataSize;
 	}
 
-	private static final Consumer<ReconcilerMessageSender> OPEN_TRADE_SCHEDULE = new Consumer<ReconcilerMessageSender>() {
+	private static final Consumer<ReconcilerMessageSender> OPEN_TRADE_SCHEDULE = t-> {
 
-		@Override
-		public void accept(ReconcilerMessageSender t) {
 			LOG.info("New scheduled task, asking for open trades");
-			final Future<?> f = application.executor().submit(
+			application.submit(
 					() -> t.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
 					);
-			application.selectorTasks().add(new SelectorTask() {
-				@Override
-				public void run() {
-					application.futureTasks().add(f);
-				}
-			});
-		}
 	};
 
 

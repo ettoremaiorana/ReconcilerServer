@@ -43,12 +43,7 @@ public class TradeTaskFactory {
 
 		@Override
 		public void onTransactionEnd(int transId) {
-			application.selectorTasks().add(new SelectorTask() {
-				@Override
-				public void run() {
-					application.executor().schedule(OPEN_TRADES_REQUEST, 5000, TimeUnit.MILLISECONDS);
-				}
-			});
+			application.enqueue(() -> application.scheduleAtFixedRate(OPEN_TRADES_REQUEST, 0l, 5000l, TimeUnit.MILLISECONDS));
 		}
 
 		@Override

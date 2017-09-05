@@ -1,7 +1,5 @@
 package com.fourcasters.forec.reconciler.server;
 
-import java.util.concurrent.Future;
-
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
@@ -24,15 +22,11 @@ public class Forwarder implements MessageHandler, AutoCloseable {
 
 	@Override
 	public void enqueue(String topic, String message) {
-		final Future<?>f = application.executor().submit(new Runnable() {
-			@Override
-			public void run() {
-				final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
-				socket.send(newTopic.getBytes(ProtocolConstants.CHARSET), ZMQ.SNDMORE);
-				socket.send(message.getBytes(ProtocolConstants.CHARSET), 0);		
-			}
-		});
-		application.futureTasks().offer(f);
+		application.submit(() -> {
+            final String newTopic = "RECONCILER" + topic.substring(topic.indexOf("@"));
+            socket.send(newTopic.getBytes(ProtocolConstants.CHARSET), ZMQ.SNDMORE);
+            socket.send(message.getBytes(ProtocolConstants.CHARSET), 0);
+        });
 	}
 
     @Override

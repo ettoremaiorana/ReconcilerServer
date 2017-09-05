@@ -1,12 +1,6 @@
 package com.fourcasters.forec.reconciler.server;
 
-import java.util.concurrent.Future;
-
 import com.fourcasters.forec.reconciler.EmailSender;
-import org.apache.commons.mail.DefaultAuthenticator;
-import org.apache.commons.mail.Email;
-import org.apache.commons.mail.EmailException;
-import org.apache.commons.mail.SimpleEmail;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -42,28 +36,24 @@ public class TradeEventCapturer implements MessageHandler {
 
 		if (status > 0) { //success
 
-			final Future<?> closedTradesfuture = application.executor().submit(
+			application.submit(
 					() -> {
 						emailSender.sendEmail(algoId, ticket, data);
 						final boolean result = messageSender.askForClosedTrades(String.valueOf(ticket), newTopic);
 						LOG.info("closedTradesFuture result = " + result);
 					}
 				);
-			application.futureTasks().add(closedTradesfuture);
 
-			final Future<?> openTradesFuture = application.executor().submit(
+			application.submit(
 					() -> {
 						final boolean result = messageSender.askForOpenTrades(newTopic);
 						LOG.info("openTradesFuture result = " + result);
 					}
 				);
-			application.futureTasks().add(openTradesFuture);
 
-			final Future<?> perfCalcFuture = application.executor().submit(new PerformanceCalcTask(topic, application));
-			application.futureTasks().add(perfCalcFuture);
+			application.submit(new PerformanceCalcTask(topic, application));
 
-			final Future<?> strategiesCaptureFuture = application.executor().submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
-			application.futureTasks().add(strategiesCaptureFuture);
+			application.submit(new StrategiesCaptureTask(algoId, strategiesTracker, application));
 
 		}
 	}

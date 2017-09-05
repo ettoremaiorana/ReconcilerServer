@@ -51,20 +51,15 @@ public class PerformanceCalc {
 			try {
 				if (!proc.waitFor(backoffTime, TimeUnit.MILLISECONDS)) {
 					LOG.info("Performance calculation is not yet completed");
-					application.selectorTasks().add(new SelectorTask() {
-						@Override
-						public void run() {
-							if (PerformanceCalcTask.this.backoffTime < MAX_BACKOFF_TIME) {
-								PerformanceCalcTask.this.backoffTime *= 2;
-								application.futureTasks().add(
-										application.executor().submit(PerformanceCalcTask.this)
-								);
-							}
-							else {
-								proc.destroy();
-							}
-						}
-					});
+					application.enqueue(() -> {
+                        if (PerformanceCalcTask.this.backoffTime < MAX_BACKOFF_TIME) {
+                            PerformanceCalcTask.this.backoffTime *= 2;
+                            application.submit(PerformanceCalcTask.this);
+                        }
+                        else {
+                            proc.destroy();
+                        }
+                    });
 				}
 				else {
 					LOG.info("Performance calculation is finished");

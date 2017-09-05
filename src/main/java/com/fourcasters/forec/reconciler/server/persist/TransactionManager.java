@@ -5,7 +5,6 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
-import java.util.concurrent.Future;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -88,8 +87,7 @@ public class TransactionManager implements TransactionPhaseListener {
 					LOG.info("First transaction in the queue: " + t);
 					if (task != null) {
 						LOG.info("Next task: " + task);
-						final Future<?> future = application.executor().submit(task);
-						application.futureTasks().add(future);
+						application.submit(task);
 					}
 					else {
 						t.waiting -= 1;
@@ -116,7 +114,7 @@ public class TransactionManager implements TransactionPhaseListener {
 				}
 			}
 			if (toEnqueueAgain) {
-				application.selectorTasks().add(this);
+				application.enqueue(this);
 			}
 		}
 	};
@@ -178,7 +176,7 @@ public class TransactionManager implements TransactionPhaseListener {
 	@Override
 	public void onTransactionStart(int transId) {
 		LOG.info("TransId " + transId + " -> on transaction start");
-		application.selectorTasks().add(new SelectorTask() {
+		application.enqueue(new SelectorTask() {
 			@Override
 			public void run() {
 				LOG.info("transaction.size.before? " + transactions.size());
@@ -200,36 +198,33 @@ public class TransactionManager implements TransactionPhaseListener {
 	@Override
 	public void onTransactionEnd(int transId) {
 		LOG.info("TransId " + transId + " -> on transaction end");
-		application.selectorTasks().add(new SelectorTask() {
-			@Override
-			public void run() {
-				LOG.info("transaction.size.before? " + transactions.size());
+		application.enqueue(() -> {
+            LOG.info("transaction.size.before? " + transactions.size());
 
-				final Transaction t = transactions.remove(transId);
-				if (t != null) {
+            final Transaction t = transactions.remove(transId);
+            if (t != null) {
 
-					t.completed = true;
-					LOG.info("TransId " + transId + " -> completed? " + t.completed);
-				}
-				else {
-					LOG.info("TransId " + transId + " -> NULL ");	
-				}
-				LOG.info("transaction.size.after? " + transactions.size());
+                t.completed = true;
+                LOG.info("TransId " + transId + " -> completed? " + t.completed);
+            }
+            else {
+                LOG.info("TransId " + transId + " -> NULL ");
+            }
+            LOG.info("transaction.size.after? " + transactions.size());
 
-			}
-		});
-		LOG.info("Selector tasks in the queue: " + application.selectorTasks().size());
+        });
+		LOG.info("Selector tasks in the queue: " + application.taskSize());
 	}
 
 	@Override
 	public void onTaskEnd() {
-		application.selectorTasks().add(DECREASE_TASK_COUNT);
+		application.enqueue(DECREASE_TASK_COUNT);
 	}
 
 	@Override
 	public void onTaskStart() {
 		tasksToRun++;
 		//add polling task to selector task queue
-		application.selectorTasks().add(POLLING_TASK);
+		application.enqueue(POLLING_TASK);
 	}
 }
