@@ -3,6 +3,7 @@ package com.fourcasters.forec.reconciler.server;
 import static org.junit.Assert.*;
 
 import com.fourcasters.forec.reconciler.EmailSender;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -16,8 +17,13 @@ public class MessageHandlerFactoryTest {
 	@Mock private ReconcilerMessageSender rms;
 	@Mock private StrategiesTracker strTracker;
 	@Mock private EmailSender emailSender;
-	private MessageHandlerFactory mhf = new MessageHandlerFactory(new ApplicationMock(), rms, strTracker, emailSender);
-	
+	@Mock private ZmqModule zmq;
+	private MessageHandlerFactory mhf;
+
+	@Before
+	public void setup() {
+		mhf = new MessageHandlerFactory(new ApplicationMock(), rms, strTracker, emailSender, zmq);
+	}
 	@Test
 	public void test() {
 		assertEquals(Forwarder.class, mhf.get("RECONC@").getClass());

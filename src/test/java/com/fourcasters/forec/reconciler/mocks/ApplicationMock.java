@@ -5,7 +5,9 @@ import static org.mockito.Mockito.when;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import com.fourcasters.forec.reconciler.server.EventHandler;
 import org.mockito.Mockito;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Context;
@@ -23,6 +25,7 @@ public class ApplicationMock implements ApplicationInterface {
 	private final ScheduledFuture DUMMY_SCH_FUTURE = Mockito.mock(ScheduledFuture.class);
     private final List<TaskEvent> submittedEvents = new ArrayList<>(64);
     private final List<TaskEvent> scheduledEvents = new ArrayList<>(64);
+    private final List<EventHandler> handlers = new ArrayList<>();
 
 	@SuppressWarnings("unchecked")
 	public ApplicationMock() {
@@ -34,23 +37,12 @@ public class ApplicationMock implements ApplicationInterface {
 	}
 
 	@Override
-	public Context context() {
-		return ZMQ.context(1);
-	}
-
-	@Override
-	public Deque<Future<?>> futureTasks() {
-		return futureTasks;
-	}
-
-	@Override
 	public int select() {
 	    int n = 0;
 		while(!selectorTask.isEmpty()) {
 			SelectorTask task = selectorTask.remove();
 			task.run();
 			n++;
-			//TODO create a future and append to future queue
 		}
 		return n;
 	}
@@ -78,7 +70,22 @@ public class ApplicationMock implements ApplicationInterface {
 		return selectorTask.size();
 	}
 
-    public void reset() {
+	@Override
+	public void registerEventHandler(EventHandler handler) {
+		handlers.add(handler);
+	}
+
+	@Override
+	public int handleEvents() {
+		return handlers.stream().mapToInt(eh -> eh.handle()).sum();
+	}
+
+	@Override
+	public void close() {
+		// nothing to close, I'm just a mock
+	}
+
+	public void reset() {
 	    submittedEvents.clear();
     }
 

@@ -1,35 +1,21 @@
 package com.fourcasters.forec.reconciler.server;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.HISTORY_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.LOG_INFO_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.MT4_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.NEW_TRADES_TOPIC_NAME;
-import static com.fourcasters.forec.reconciler.server.ProtocolConstants.RECONCILER_TOPIC_NAME;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
 
-import com.fourcasters.forec.reconciler.EmailSender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Context;
-import org.zeromq.ZMQ.Socket;
 
 import com.fourcasters.forec.reconciler.query.marketdata.HistoryDAO;
 import com.fourcasters.forec.reconciler.server.http.HttpParser;
@@ -39,14 +25,7 @@ public class ReconcilerBroker {
 	private static final Application application = new Application();
 	private static final Logger LOG = LogManager.getLogger(ReconcilerBroker.class);
 
-	private static final int bufferSize = 10240*5;
-	private static final byte[] TOPIC_NAME_IN_INPUT = new byte[bufferSize];
-	private static final byte[] DATA_IN_INPUT = new byte[bufferSize];
-	private static final ByteBuffer TOPIC_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
-	private static final ByteBuffer DATA_BUFFER = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder());
 	private static volatile boolean running;
-	private static String topicName;
-	private static String data;
 	private static SelectionKey key;
 	private static Thread t;
 
@@ -69,27 +48,25 @@ public class ReconcilerBroker {
 			LOG.info("Write anything and then press enter to let the program start");
 			new BufferedReader(new InputStreamReader(System.in, StandardCharsets.US_ASCII)).readLine();
 		}
-		final Context ctx = application.context();
-		final Socket server = zmqSetup(ctx);
-		final Socket newTradesListener = zmqSetupListener(ctx);
 		final Selector s = Selector.open();
 		final ServerSocketChannel httpServer = httpServerSetup(s);
 
-		final ReconcilerMessageSender reconcMessageSender = new ReconcilerMessageSender(application);
 		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
+		final ZmqModule zmqModule = new ZmqModule(application, strategiesTracker);
+		zmqModule.start();
+
 		final HistoryDAO dao = new HistoryDAO();
 		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
-		final EmailSender emailSender = new EmailSender();
-		final MessageHandlerFactory zmqMsgsHandlers = new MessageHandlerFactory(application, reconcMessageSender,
-				strategiesTracker, emailSender);
 		dao.createIndexAll();
-		application.scheduleAtFixedRate(() -> OPEN_TRADE_SCHEDULE.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
 
 		running = true;
 		LOG.info("Http server listening on port " + httpServer.socket().getLocalPort());
 		LOG.info("Zmq  server listening on port 51125");
 		while (running) {
-			zmqEventHandling(zmqMsgsHandlers, server, newTradesListener);
+			int events = application.handleEvents();
+			if (events > 0) {
+			    LOG.info("Nr of events handled: " + events);
+            }
 			httpEventHandling(s, httpServer, httpReqHandler);
 
 			application.select();
@@ -98,8 +75,8 @@ public class ReconcilerBroker {
 		}
 		httpServer.close();
 		s.close();
-		server.close();
-		ctx.close();
+		zmqModule.stop();
+		application.close();
 	}
 
 	private static void httpEventHandling(Selector s, ServerSocketChannel httpServer, HttpRequestHandler httpReqHandler) throws IOException {
@@ -140,33 +117,6 @@ public class ReconcilerBroker {
 		}
 	}
 
-
-
-	private static void zmqEventHandling(MessageHandlerFactory handlersFactory, final Socket... sockets) throws UnsupportedEncodingException {
-		for (Socket socket : sockets) {
-			try {
-				int recvTopicSize = socket.recvByteBuffer(TOPIC_BUFFER, ZMQ.NOBLOCK);
-				if (recvTopicSize > 0) {
-					read(socket);
-
-					LOG.info("topic = " + topicName);
-					LOG.info("data  = " + data);
-					final MessageHandler handler = handlersFactory.get(topicName);
-					handler.enqueue(topicName, data);
-
-					TOPIC_BUFFER.clear();
-					DATA_BUFFER.clear();
-				}
-			}
-			catch (Exception e) {
-				LOG.error("zmq message event handling failed: ", e);
-			}
-		}
-
-	}
-
-
-
 	private static ServerSocketChannel httpServerSetup(Selector s) {
 		ServerSocketChannel httpServer = null;
 		try {
@@ -186,54 +136,6 @@ public class ReconcilerBroker {
 			throw new RuntimeException("Unable to allocate new http server socket", e);
 		}
 	}
-
-
-
-	private static Socket zmqSetup(final Context ctx) {
-		final Socket server = ctx.socket(ZMQ.SUB);
-		server.bind("tcp://*:51125");
-		server.subscribe(HISTORY_TOPIC_NAME.getBytes(CHARSET));
-		server.subscribe(RECONCILER_TOPIC_NAME.getBytes(CHARSET));
-		server.subscribe(NEW_TRADES_TOPIC_NAME.getBytes(CHARSET));
-		server.subscribe(MT4_TOPIC_NAME.getBytes(CHARSET));
-
-		return server;
-	}
-
-
-	private static Socket zmqSetupListener(final Context ctx) {
-		final Socket listener = ctx.socket(ZMQ.SUB);
-		listener.connect("tcp://localhost:50027");
-		listener.subscribe(NEW_TRADES_TOPIC_NAME.getBytes(CHARSET));
-		if (Boolean.getBoolean("log.info")) {
-			listener.subscribe(LOG_INFO_TOPIC_NAME.getBytes(CHARSET));
-		}
-		return listener;
-	}
-
-
-	private static int read(final Socket server) throws UnsupportedEncodingException {
-		TOPIC_BUFFER.flip();
-		TOPIC_BUFFER.get(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit()); //read only the bits just read
-		topicName = new String(TOPIC_NAME_IN_INPUT, 0, TOPIC_BUFFER.limit(), CHARSET);
-		int recvDataSize = 0;
-		while (recvDataSize == 0) {
-			recvDataSize = server.recvByteBuffer(DATA_BUFFER, ZMQ.NOBLOCK);
-		}
-		DATA_BUFFER.flip();
-		DATA_BUFFER.get(DATA_IN_INPUT, 0, DATA_BUFFER.limit()); //read only the bits just read
-		data = new String(DATA_IN_INPUT, 0, DATA_BUFFER.limit(), CHARSET);
-		return recvDataSize;
-	}
-
-	private static final Consumer<ReconcilerMessageSender> OPEN_TRADE_SCHEDULE = t-> {
-
-			LOG.info("New scheduled task, asking for open trades");
-			application.submit(
-					() -> t.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
-					);
-	};
-
 
 	void stop() {
 		running = false;

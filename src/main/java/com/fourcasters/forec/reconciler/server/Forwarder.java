@@ -1,15 +1,12 @@
 package com.fourcasters.forec.reconciler.server;
 
 import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 public class Forwarder implements MessageHandler, AutoCloseable {
 
-    public static Forwarder create(ApplicationInterface application) {
-        final Context ctx = application.context();
-        final Socket socket = ctx.socket(ZMQ.PUB);
-	socket.bind("tcp://*:51127");
+    public static Forwarder create(ApplicationInterface application, ZmqModule zmq) {
+        final Socket socket = zmq.newBoundSocket("tcp://*:51127");
         return new Forwarder(application, socket);
     }
 	private final Socket socket;

@@ -2,7 +2,6 @@ package com.fourcasters.forec.reconciler.server;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 import java.util.Calendar;
@@ -13,11 +12,9 @@ public class ReconcilerMessageSender {
 
 	private final static Logger LOG = LogManager.getLogger(ReconcilerMessageSender.class);
 	private final static byte[] OPEN_IN_BYTES = "OPEN".getBytes(CHARSET);
-	private final Context ctx;
 	private final Socket socket;
 
-	public ReconcilerMessageSender(ApplicationInterface application) {
-		ctx = application.context();
+	public ReconcilerMessageSender(ZMQ.Context ctx) {
 		socket  = ctx.socket(ZMQ.PUB);
 		socket.connect("tcp://localhost:51125");
 	}

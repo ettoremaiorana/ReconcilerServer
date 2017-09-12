@@ -16,9 +16,9 @@ public class MessageHandlerFactory {
 	private final Identity identity;
 
 	public MessageHandlerFactory(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender,
-								 StrategiesTracker strategiesTracker, EmailSender emailSender) {
+								 StrategiesTracker strategiesTracker, EmailSender emailSender, ZmqModule zmq) {
 		persister  = new TradePersister(new TransactionManager(new TradeTaskFactory(application, reconcMessageSender), application), application);
-		forwarder = Forwarder.create(application);
+		forwarder = Forwarder.create(application, zmq);
 		tradeAppender = new TradeEventCapturer(application, reconcMessageSender, strategiesTracker, emailSender);
 		logger = new Logger();
 		mt4HandlerFactory = new Mt4HandlerFactory();
