@@ -51,12 +51,11 @@ public class ReconcilerBroker {
 		final Selector s = Selector.open();
 		final ServerSocketChannel httpServer = httpServerSetup(s);
 
-		final StrategiesTracker strategiesTracker = new StrategiesTracker(application, new InitialStrategiesLoader());
-		final ZmqModule zmqModule = new ZmqModule(application, strategiesTracker);
+		final ZmqModule zmqModule = new ZmqModule(application);
 		zmqModule.start();
 
 		final HistoryDAO dao = new HistoryDAO();
-		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(strategiesTracker, dao);
+		final HttpRequestHandler httpReqHandler = new HttpRequestHandler(dao);
 		dao.createIndexAll();
 
 		running = true;

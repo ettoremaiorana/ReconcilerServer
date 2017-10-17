@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server.trades.persist;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.never;
@@ -15,7 +15,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
-import com.fourcasters.forec.reconciler.server.ReconcilerMessageSender;
+import com.fourcasters.forec.reconciler.server.trades.TradeReconcilerMessageSender;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TransactionManagerTest {
@@ -24,7 +24,7 @@ public class TransactionManagerTest {
 //	private String fullData = "67890=FULL=a,b,c,d,e,f||g,h,i,j,k,l||m,n,o,p,q,r||s,t,u,v,w,x";
 //	private String fullDataRequiringMore = "67890=FULL=z,z,z,z,z,z||y,y,y,y,y,y||more";
 
-	@Mock private ReconcilerMessageSender sender;
+	@Mock private TradeReconcilerMessageSender sender;
 	private ApplicationMock application = new ApplicationMock();
 	private TransactionManager transactionManager;
 	private TradeTaskFactory taskFactory;

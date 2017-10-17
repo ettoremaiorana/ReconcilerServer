@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server.trades.persist;
 
 import static org.mockito.Mockito.verify;
 

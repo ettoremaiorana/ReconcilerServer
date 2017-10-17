@@ -1,9 +1,8 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server.trades.persist;
 
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.MessageHandler;
-import com.fourcasters.forec.reconciler.server.ReconcilerBroker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

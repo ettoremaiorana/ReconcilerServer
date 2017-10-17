@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+import com.fourcasters.forec.reconciler.server.ApplicationInterface;
+import com.fourcasters.forec.reconciler.server.InitialStrategiesLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -31,8 +33,8 @@ public class HttpRequestHandler {
 	private final StrategiesTracker strategiesTracker;
 	private final HistoryDAO historyDao;
 
-	public HttpRequestHandler(StrategiesTracker strategiesTracker, HistoryDAO historyDao) {
-		this.strategiesTracker = strategiesTracker;
+	public HttpRequestHandler(HistoryDAO historyDao) {
+		this.strategiesTracker = new StrategiesTracker(new InitialStrategiesLoader());
 		LOG.debug(ReconcilerConfig.MD_DATA_PATH);
 		this.historyDao = historyDao;
 	}

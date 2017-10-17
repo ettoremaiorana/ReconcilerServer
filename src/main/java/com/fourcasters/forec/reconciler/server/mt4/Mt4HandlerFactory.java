@@ -4,7 +4,7 @@ import com.fourcasters.forec.reconciler.server.Identity;
 import com.fourcasters.forec.reconciler.server.Logger;
 import com.fourcasters.forec.reconciler.server.MessageHandler;
 
-public class Mt4HandlerFactory {
+public class Mt4HandlerFactory implements MessageHandler {
 
 
 	private final HistoryHandler historyHandler;
@@ -32,4 +32,8 @@ public class Mt4HandlerFactory {
 		}
 	}
 
+	@Override
+	public void enqueue(String topic, String data) {
+		get(topic).enqueue(topic, data);
+	}
 }

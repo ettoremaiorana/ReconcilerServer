@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server.trades.persist;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -11,9 +11,9 @@ import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
 import com.fourcasters.forec.reconciler.server.SelectorTask;
-import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.FullTask;
-import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.OpenTradeTask;
-import com.fourcasters.forec.reconciler.server.persist.TradeTaskFactory.SingleTradeTask;
+import com.fourcasters.forec.reconciler.server.trades.persist.TradeTaskFactory.FullTask;
+import com.fourcasters.forec.reconciler.server.trades.persist.TradeTaskFactory.OpenTradeTask;
+import com.fourcasters.forec.reconciler.server.trades.persist.TradeTaskFactory.SingleTradeTask;
 
 public class TransactionManager implements TransactionPhaseListener {
 

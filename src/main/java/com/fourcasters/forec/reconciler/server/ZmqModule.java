@@ -1,14 +1,15 @@
 package com.fourcasters.forec.reconciler.server;
 
-import com.fourcasters.forec.reconciler.EmailSender;
+import com.fourcasters.forec.reconciler.server.marketdata.MarketDataModule;
+import com.fourcasters.forec.reconciler.server.trades.TradeModule;
 import org.apache.logging.log4j.*;
 import org.zeromq.ZMQ;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.*;
 
@@ -18,11 +19,8 @@ public class ZmqModule implements EventHandler, Module {
 
     private final int bufferSize = 10240*5;
     private final ApplicationInterface application;
-    private final StrategiesTracker strategiesTracker;
-    private final EmailSender emailSender;
-    private ReconcilerMessageSender reconcMessageSender;
-    private MessageHandlerFactory handlersFactory;
-    private Consumer<ReconcilerMessageSender> openTradesSchedule;
+    private final List<Module> modules;
+    private ZmqMessageHandlerFactory handlersFactory;
     private String topicName;
     private String data;
 
@@ -34,10 +32,9 @@ public class ZmqModule implements EventHandler, Module {
     private ZMQ.Socket newTradesListener;
     private ZMQ.Context ctx;
 
-    public ZmqModule(ApplicationInterface app, StrategiesTracker st) {
+    public ZmqModule(ApplicationInterface app) {
         application = app;
-        emailSender = new EmailSender();
-        strategiesTracker = st;
+        modules = new ArrayList<>();
     }
 
     private int zmqEventHandling(final ZMQ.Socket... sockets) {
@@ -80,7 +77,6 @@ public class ZmqModule implements EventHandler, Module {
         return recvDataSize;
     }
 
-
     @Override
     public int handle() {
         return zmqEventHandling();
@@ -91,21 +87,18 @@ public class ZmqModule implements EventHandler, Module {
         ctx = ZMQ.context(1);
         server = zmqSetup(ctx);
         newTradesListener = zmqSetupListener(ctx);
-        reconcMessageSender = new ReconcilerMessageSender(ctx);
-        handlersFactory = new MessageHandlerFactory(application, reconcMessageSender, strategiesTracker, emailSender, this);
-        openTradesSchedule = t-> {
-            LOG.info("New scheduled task, asking for open trades");
-            application.submit(
-                    () -> t.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002")
-            );
-        };
-        application.scheduleAtFixedRate(() -> openTradesSchedule.accept(reconcMessageSender), 120L, 5L, TimeUnit.MINUTES);
+        handlersFactory = new ZmqMessageHandlerFactory(application, this);
         application.registerEventHandler(this);
+
+        modules.add(new TradeModule(application, ctx, handlersFactory));
+        modules.add(new MarketDataModule());
+        modules.forEach(module -> module.start());
     }
 
     @Override
     public void stop() {
-        server.close();        
+        modules.forEach(module -> module.stop());
+        server.close();
     }
 
     private static ZMQ.Socket zmqSetup(final ZMQ.Context ctx) {
@@ -133,5 +126,9 @@ public class ZmqModule implements EventHandler, Module {
         final ZMQ.Socket socket = ctx.socket(ZMQ.PUB);
 	    socket.bind("tcp://*:51127");
         return socket;
+    }
+
+    protected MessageHandler getMsgHandler(String key) {
+        return handlersFactory.get(key);
     }
 }

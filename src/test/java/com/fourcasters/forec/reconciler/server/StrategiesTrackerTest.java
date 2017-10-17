@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Set;
 
+import com.fourcasters.forec.reconciler.mocks.ApplicationMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,7 +22,8 @@ public class StrategiesTrackerTest {
 	@SuppressWarnings("unchecked")
 	@Before
 	public void setUp() throws Exception {
-		tracker = new StrategiesTracker(application, loader);
+		application = new ApplicationMock();
+		tracker = new StrategiesTracker(loader);
 		when(loader.load(any(Set.class))).thenReturn(0);
 	}
 

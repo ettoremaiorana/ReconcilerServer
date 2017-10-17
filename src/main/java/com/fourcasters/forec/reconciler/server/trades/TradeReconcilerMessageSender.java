@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server;
+package com.fourcasters.forec.reconciler.server.trades;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeromq.ZMQ;
@@ -8,13 +8,13 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
-public class ReconcilerMessageSender {
+public class TradeReconcilerMessageSender {
 
-	private final static Logger LOG = LogManager.getLogger(ReconcilerMessageSender.class);
+	private final static Logger LOG = LogManager.getLogger(TradeReconcilerMessageSender.class);
 	private final static byte[] OPEN_IN_BYTES = "OPEN".getBytes(CHARSET);
 	private final Socket socket;
 
-	public ReconcilerMessageSender(ZMQ.Context ctx) {
+	public TradeReconcilerMessageSender(ZMQ.Context ctx) {
 		socket  = ctx.socket(ZMQ.PUB);
 		socket.connect("tcp://localhost:51125");
 	}

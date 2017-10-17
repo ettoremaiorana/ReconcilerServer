@@ -1,10 +1,14 @@
-package com.fourcasters.forec.reconciler.server;
+package com.fourcasters.forec.reconciler.server.trades;
 
 import static org.junit.Assert.assertTrue;
 
 import static org.mockito.Mockito.verify;
 
 import com.fourcasters.forec.reconciler.EmailSender;
+import com.fourcasters.forec.reconciler.server.StrategiesCaptureTask;
+import com.fourcasters.forec.reconciler.server.StrategiesTracker;
+import com.fourcasters.forec.reconciler.server.trades.TradeReconcilerMessageSender;
+import com.fourcasters.forec.reconciler.server.trades.TradeEventCapturer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,7 +27,7 @@ public class TradeEventCapturerTest {
 
 	private TradeEventCapturer capture;
 	private ApplicationMock application;
-	@Mock private ReconcilerMessageSender sender;
+	@Mock private TradeReconcilerMessageSender sender;
 	@Mock private StrategiesTracker strTracker;
 	@Mock private EmailSender emailSender;
 

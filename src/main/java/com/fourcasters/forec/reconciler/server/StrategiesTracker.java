@@ -1,15 +1,19 @@
 package com.fourcasters.forec.reconciler.server;
 
-import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.logging.log4j.Logger;
+
+import static org.apache.logging.log4j.LogManager.getLogger;
 
 public class StrategiesTracker {
+
+	private static final Logger LOG = getLogger(InitialStrategiesLoader.class);
 
 	private final CopyOnWriteArraySet<Integer> strategies = new CopyOnWriteArraySet<>();
 	private int[] asArray;
 
-	public StrategiesTracker(ApplicationInterface application, InitialStrategiesLoader loader) throws IOException {
+	public StrategiesTracker(InitialStrategiesLoader loader) {
 		loader.load(strategies);
 		asArray = new int[strategies.size()];
 		AtomicInteger i = new AtomicInteger(0);
@@ -33,5 +37,4 @@ public class StrategiesTracker {
 		System.arraycopy(asArray, 0, copy, 0, asArray.length);
 		return copy;
 	}
-
 }

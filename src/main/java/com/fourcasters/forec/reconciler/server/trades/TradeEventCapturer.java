@@ -1,6 +1,7 @@
-package com.fourcasters.forec.reconciler.server;
+package com.fourcasters.forec.reconciler.server.trades;
 
 import com.fourcasters.forec.reconciler.EmailSender;
+import com.fourcasters.forec.reconciler.server.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,12 +12,12 @@ public class TradeEventCapturer implements MessageHandler {
 	private final static Logger LOG = LogManager.getLogger(TradeEventCapturer.class);
 
 	private final ApplicationInterface application;
-	private final ReconcilerMessageSender messageSender;
+	private final TradeReconcilerMessageSender messageSender;
 	private final StrategiesTracker strategiesTracker;
 	private final EmailSender emailSender;
 
 
-	public TradeEventCapturer(ApplicationInterface application, ReconcilerMessageSender reconcMessageSender,
+	public TradeEventCapturer(ApplicationInterface application, TradeReconcilerMessageSender reconcMessageSender,
                               StrategiesTracker strategiesTracker, EmailSender emailSender) {
 		this.application = application;
 		this.messageSender = reconcMessageSender;

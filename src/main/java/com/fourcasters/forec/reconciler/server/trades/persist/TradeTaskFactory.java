@@ -1,4 +1,4 @@
-package com.fourcasters.forec.reconciler.server.persist;
+package com.fourcasters.forec.reconciler.server.trades.persist;
 
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CHARSET;
 import static com.fourcasters.forec.reconciler.server.ProtocolConstants.CLOSED_TRADES_FILE_NAME;
@@ -15,22 +15,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fourcasters.forec.reconciler.server.ApplicationInterface;
-import com.fourcasters.forec.reconciler.server.ReconcilerMessageSender;
-import com.fourcasters.forec.reconciler.server.SelectorTask;
+import com.fourcasters.forec.reconciler.server.trades.TradeReconcilerMessageSender;
 
 public class TradeTaskFactory {
 
 	private static final File closed_trades_file = new File(CLOSED_TRADES_FILE_NAME);
 	private static final File open_trades_file = new File(OPEN_TRADES_FILE_NAME);
 	private static final Logger LOG = LogManager.getLogger(TradeTaskFactory.class);
-	private final ReconcilerMessageSender reconcilerMessageSender;
+	private final TradeReconcilerMessageSender tradeReconcilerMessageSender;
 	private final ApplicationInterface application;
 
 	private final Runnable OPEN_TRADES_REQUEST = new Runnable() {
 		@Override
 		public void run() {
 			LOG.info("Open trades transaction completed, starting a new one");
-			reconcilerMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
+			tradeReconcilerMessageSender.askForOpenTrades("RECONC@ACTIVTRADES@EURUSD@1002");
 		}
 	};
 	
@@ -55,9 +54,9 @@ public class TradeTaskFactory {
 		}
 	};
 	
-	public TradeTaskFactory(ApplicationInterface application, ReconcilerMessageSender reconcilerMessageSender) {
+	public TradeTaskFactory(ApplicationInterface application, TradeReconcilerMessageSender tradeReconcilerMessageSender) {
 		this.application = application;
-		this.reconcilerMessageSender = reconcilerMessageSender;
+		this.tradeReconcilerMessageSender = tradeReconcilerMessageSender;
 	}
 
 	public OpenTradeTask newOpenTradeTask(String tradesInMessage, TransactionPhaseListener listener, int transId, boolean first) {
